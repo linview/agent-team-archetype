@@ -1,0 +1,58 @@
+# 开发环境 Dockerfile 模板
+# 用途: 本地集成测试 (docker compose up)
+# 镜像标签: :local (由 docker-compose.yaml 指定)
+# 构建命令: docker compose build api
+# 运行命令: docker compose up -d
+
+# 构建阶段
+FROM {BASE_IMAGE} AS builder
+
+# 安装构建依赖
+RUN apk add --no-cache git make
+
+# 设置工作目录
+WORKDIR /build
+
+# 复制依赖文件
+COPY {DEPENDENCY_FILES} ./
+
+# 下载依赖
+RUN {DOWNLOAD_COMMAND}
+
+# 复制源代码
+COPY . .
+
+# 构建二进制文件
+RUN {BUILD_COMMAND}
+
+# 运行阶段
+FROM {RUNTIME_IMAGE}
+
+# 安装运行时依赖
+RUN apk --no-cache add ca-certificates wget
+
+# 创建非 root 用户
+RUN addgroup -g 1000 appuser && \
+    adduser -D -u 1000 -G appuser appuser
+
+# 设置工作目录
+WORKDIR /app
+
+# 从构建阶段复制二进制文件
+COPY --from=builder /build/{BINARY_NAME} .
+
+# 复制配置文件
+COPY {CONFIG_FILES} ./
+
+# 切换到非 root 用户
+USER appuser
+
+# 暴露端口
+EXPOSE {EXPOSE_PORT}
+
+# 健康检查
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD {HEALTHCHECK_COMMAND}
+
+# 启动命令
+CMD ["./{BINARY_NAME}"]

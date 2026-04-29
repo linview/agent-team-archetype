@@ -1,0 +1,218 @@
+# 数据层设计文档 v{sem_ver}
+
+**文档版本**: v{sem_ver}
+**创建日期**: YYYY-MM-DD
+**作者**: {Author}
+**状态**: {Status}
+
+---
+
+## 📋 版本历史
+
+| 版本 | 日期 | 变更说明 | 作者 |
+|------|------|---------|------|
+| v1.0 | YYYY-MM-DD | 初始版本 | {Author} |
+
+---
+
+## 📋 文档概述
+
+本文档描述了 {Project Name} 数据层的设计，包括数据模型、表结构、索引设计和数据字典。
+
+---
+
+## 🎯 设计目标
+
+1. **数据模型设计**：清晰的数据实体和关系定义
+2. **表结构设计**：优化的数据库表结构
+3. **索引设计**：高效的查询索引
+4. **数据字典**：完整的字段说明
+
+---
+
+## 📊 数据模型
+
+### 核心实体
+
+```
+┌─────────────┐         ┌─────────────┐         ┌─────────────┐
+│   User      │         │    Team     │         │   Project   │
+├─────────────┤         ├─────────────┤         ├─────────────┤
+│ id (PK)     │         │ id (PK)     │         │ id (PK)     │
+│ name        │         │ name        │         │ name        │
+│ email       │    N    │ owner_id    │    N    │ team_id     │
+│ ...         │         │ ...         │         │ ...         │
+└─────────────┘         └─────────────┘         └─────────────┘
+       │                       │                       │
+       └───────────────────────┴───────────────────────┘
+                              │
+                              │ 1
+                              │
+                              │
+                    ┌─────────────┐
+                    │  Resource   │
+                    ├─────────────┤
+                    │ id (PK)     │
+                    │ project_id  │
+                    │ ...         │
+                    └─────────────┘
+```
+
+### 实体关系
+
+- **User → Team**: 一个用户可以属于多个团队
+- **Team → Project**: 一个团队可以有多个项目
+- **Project → Resource**: 一个项目可以有多个资源
+
+---
+
+## 🗄️ 表结构设计
+
+### {Table_Name_1}
+
+**表名**: `{table_name_1}`
+**说明**: {表说明}
+
+#### 字段定义
+
+| 字段名 | 类型 | 约束 | 说明 |
+|--------|------|------|------|
+| `id` | BIGINT | PRIMARY KEY | 主键 |
+| `name` | VARCHAR(255) | NOT NULL | 名称 |
+| `created_at` | TIMESTAMP | NOT NULL | 创建时间 |
+| `updated_at` | TIMESTAMP | NOT NULL | 更新时间 |
+
+#### 索引
+
+| 索引名 | 字段 | 类型 | 说明 |
+|--------|------|------|------|
+| `idx_{table}_name` | `name` | BTREE | 名称索引 |
+
+#### 约束
+
+| 约束名 | 类型 | 字段 | 说明 |
+|--------|------|------|------|
+| `uniq_{table}_name` | UNIQUE | `name` | 名称唯一约束 |
+
+---
+
+### {Table_Name_2}
+
+**表名**: `{table_name_2}`
+**说明**: {表说明}
+
+#### 字段定义
+
+| 字段名 | 类型 | 约束 | 说明 |
+|--------|------|------|------|
+| `id` | BIGINT | PRIMARY KEY | 主键 |
+| `{foreign_key}` | BIGINT | FOREIGN KEY | 外键 |
+| `...` | ... | ... | ... |
+
+---
+
+## 🔍 索引设计
+
+### 索引策略
+
+1. **主键索引**：所有表都有主键索引
+2. **唯一索引**：保证数据唯一性
+3. **普通索引**：优化查询性能
+4. **复合索引**：优化多字段查询
+
+### 索引列表
+
+| 表名 | 索引名 | 字段 | 类型 | 说明 |
+|------|--------|------|------|------|
+| {table_1} | idx_{table_1}_{field} | {field} | BTREE | {说明} |
+| {table_2} | idx_{table_2}_{field1}_{field2} | {field1}, {field2} | BTREE | {说明} |
+
+---
+
+## 📖 数据字典
+
+### {Table_Name_1}
+
+| 字段名 | 类型 | 长度 | 允许 NULL | 默认值 | 说明 |
+|--------|------|------|----------|--------|------|
+| id | BIGINT | - | NO | AUTO_INCREMENT | 主键 |
+| name | VARCHAR | 255 | NO | - | 名称 |
+| description | TEXT | - | YES | NULL | 描述 |
+| created_at | TIMESTAMP | - | NO | CURRENT_TIMESTAMP | 创建时间 |
+| updated_at | TIMESTAMP | - | NO | CURRENT_TIMESTAMP ON UPDATE | 更新时间 |
+
+### {Table_Name_2}
+
+| 字段名 | 类型 | 长度 | 允许 NULL | 默认值 | 说明 |
+|--------|------|------|----------|--------|------|
+| ... | ... | ... | ... | ... | ... |
+
+---
+
+## 🔄 数据迁移
+
+### 迁移脚本
+
+**版本**: v{sem_ver}
+**文件**: `schema/migration_v{sem_ver}.sql`
+
+```sql
+-- 创建表
+CREATE TABLE {table_name} (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uniq_{table}_name (name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 创建索引
+CREATE INDEX idx_{table}_name ON {table_name}(name);
+```
+
+---
+
+## 📈 查询示例
+
+### 常用查询
+
+#### 查询 1: {查询说明}
+
+```sql
+SELECT *
+FROM {table_name}
+WHERE {condition}
+ORDER BY {field}
+LIMIT {limit};
+```
+
+#### 查询 2: {查询说明}
+
+```sql
+SELECT t1.*, t2.{field}
+FROM {table_1} t1
+JOIN {table_2} t2 ON t1.{foreign_key} = t2.id
+WHERE t1.{condition};
+```
+
+---
+
+## ⚠️ 注意事项
+
+1. **字符集**：所有表使用 `utf8mb4` 字符集
+2. **引擎**：使用 `InnoDB` 存储引擎
+3. **时间字段**：使用 `TIMESTAMP` 类型
+4. **软删除**：重要表考虑添加 `deleted_at` 字段
+
+---
+
+## 🔗 相关文档
+
+- [服务层架构](service_layer_architecture_{sem_ver}.md)
+- [API 设计](api_design_{sem_ver}.md)
+
+---
+
+**文档版本**: v{sem_ver}
+**最后更新**: YYYY-MM-DD
+**维护者**: {Maintainer}

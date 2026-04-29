@@ -1,0 +1,62 @@
+# Resource Meter Sprint 看板（泳道图）
+**更新时间**: {{ update_time }}
+**说明**: 使用 Unicode 字符绘制的状态泳道图
+
+```text
+{% macro story_card(story) -%}
+┌─ {{ story.id }}: {{ story.title }} ({{ story.story_points }} SP) {{ '─' * (50 - story.id|length - story.title|length - story.story_points|length - 10) }}┐
+│ 👤 {{ story.assignee or 'TBD' }}{{ ' ' * (70 - (story.assignee|length if story.assignee else 3)) }}│
+│ 📅 {{ story.start_date or 'TBD' }} ~ {{ story.target_date or 'TBD' }}{{ ' ' * (70 - (story.start_date|length if story.start_date else 3) - (story.target_date|length if story.target_date else 3) - 3) }}│
+└──────────────────────────────────────────────────────────────────────────────┘
+{% endmacro -%}
+
+{% macro swimlane(title, icon, stories, count) -%}
+┌──────────────────────────────────────────────────────────────────────────────────────┐
+│ {{ icon }} {{ title }} ({{ count }}){{ ' ' * (75 - title|length - 5) }}│
+├──────────────────────────────────────────────────────────────────────────────────────┤
+{% for story in stories[:10] %}
+│ {{ story_card(story) }}
+{% endfor %}
+{% if stories|length > 10 %}
+│ ... 还有 {{ stories|length - 10 }} 个 Story
+{% endif %}
+└──────────────────────────────────────────────────────────────────────────────────────┘
+
+{% endmacro -%}
+
+{{ swimlane('待办', '📋', stories.TODO, stories.TODO|length) }}
+
+{{ swimlane('进行中', '🚧', stories.IN_PROGRESS, stories.IN_PROGRESS|length) }}
+
+{% if stories.IN_REVIEW %}
+{{ swimlane('审查中', '👀', stories.IN_REVIEW, stories.IN_REVIEW|length) }}
+{% endif %}
+
+{% if stories.TESTING %}
+{{ swimlane('测试中', '🧪', stories.TESTING, stories.TESTING|length) }}
+{% endif %}
+
+{{ swimlane('已完成', '✅', stories.COMPLETED, stories.COMPLETED|length) }}
+
+{% if stories.BLOCKED %}
+{{ swimlane('阻塞', '🚫', stories.BLOCKED, stories.BLOCKED|length) }}
+{% endif %}
+
+{% if stories.CANCELLED %}
+{{ swimlane('已取消', '❌', stories.CANCELLED, stories.CANCELLED|length) }}
+{% endif %}
+```
+
+---
+
+## 📊 统计摘要
+
+| 状态 | 数量 | 占比 |
+|------|------|------|
+| 📋 待办 | {{ statistics.total_stories - statistics.completed_stories - statistics.in_progress_stories }} | {{ ((statistics.total_stories - statistics.completed_stories - statistics.in_progress_stories) * 100 / statistics.total_stories)|round(1) }}% |
+| 🚧 进行中 | {{ statistics.in_progress_stories }} | {{ (statistics.in_progress_stories * 100 / statistics.total_stories)|round(1) }}% |
+| ✅ 已完成 | {{ statistics.completed_stories }} | {{ statistics.completion_rate }} |
+| **总计** | **{{ statistics.total_stories }}** | **100%** |
+
+**Epic 总数**: {{ statistics.total_epics }}
+**生成时间**: {{ update_time }}

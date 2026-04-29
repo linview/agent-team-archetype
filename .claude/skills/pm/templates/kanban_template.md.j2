@@ -1,0 +1,57 @@
+# Resource Meter Sprint 看板
+**更新时间**: {{ update_time }}
+
+---
+
+## 📋 待办
+
+{% for story in stories.TODO %}
+- **{{ story.id }}**: {{ story.title }} ({{ story.assignee }})
+{% endfor %}
+
+## 🚧 进行中
+
+{% for story in stories.IN_PROGRESS %}
+- **{{ story.id }}**: {{ story.title }} ({{ story.assignee }})
+{% endfor %}
+
+{% for story in stories.IN_REVIEW %}
+- **{{ story.id }}**: {{ story.title }} ({{ story.assignee }})
+{% endfor %}
+
+## 👀 审查中
+
+{% for story in stories.TESTING %}
+- **{{ story.id }}**: {{ story.title }} ({{ story.assignee }})
+{% endfor %}
+
+## 🧪 测试中
+
+_暂无 Story_
+
+## ✅ 已完成
+
+{% for story in stories.COMPLETED %}
+- **{{ story.id }}**: {{ story.title }} ({{ story.assignee }})
+{% endfor %}
+
+## 🚫 阻塞
+
+{% for story in stories.BLOCKED %}
+- **{{ story.id }}**: {{ story.title }} ({{ story.assignee }})
+{% endfor %}
+
+## ❌ 已取消
+
+{% for story in stories.CANCELLED %}
+- **{{ story.id }}**: {{ story.title }}
+{% endfor %}
+
+---
+
+## 📊 统计信息
+
+- **总 Story 数**: {{ statistics.total_stories }}
+- **已完成**: {{ statistics.completed_stories }} ({{ statistics.completion_rate }})
+- **进行中**: {{ statistics.in_progress_stories }}
+- **总 Epic 数**: {{ statistics.total_epics }}

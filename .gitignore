@@ -1,0 +1,129 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+# Build directory
+build/
+dist/
+bin/
+
+# Main binary (all variations)
+main
+/resource-meter
+/resource-meter-api
+/resource-meter_api
+resource-meter.exe
+resource-meter-api.exe
+resource_meter
+/resource-meter-api-*
+
+# Log directory
+log/
+*.log
+
+# Temporary cache files
+.cache/
+tmp/
+temp/
+*.tmp
+*.cache
+
+# Database files (local development)
+*.db
+*.sqlite
+*.sqlite3
+
+# Dependency directories
+vendor/
+
+# Python workspace files
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+
+# Go workspace file
+go.work
+
+# IDE specific files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS specific files
+.DS_Store
+Thumbs.db
+
+# Sandbox directory
+sandbox/
+
+# Environment variables
+.env
+.env.local
+
+# Kubernetes configuration (contains sensitive credentials)
+.kubeconfig
+kubeconfig
+ca.crt
+
+# Application configuration files (contains sensitive credentials)
+# Use .yaml.template files instead
+etc/config/config-prod.yaml
+etc/config/config-test.yaml
+etc/config/*.yaml
+!etc/config/*.yaml.template
+
+# Test reports and coverage (all temporary files)
+test_reports/
+test_reports/**/*
+coverage.out
+coverage.html
+test_results.log
+coverage_report.log
+*.coverprofile
+*.coverage.json
+
+# Pytest cache and results
+.pytest_cache/
+.pytest_cache/**/*
+htmlcov/
+.tox/
+*.pytest_cache
+
+# Development planning documents (local use only)
+docs/DEVELOPMENT_PLAN.md
+.env.prod
+
+# Claude Code 定时任务锁文件（自动管理）
+# 由 /loop 命令（CronCreate 工具）自动创建和管理
+# 包含 sessionId、pid、acquiredAt 等任务元数据
+# 任务会在 3 天后自动过期，文件会自动清理
+.claude/scheduled_tasks.lock
+.claude/scheduled_tasks.json
+
+# -----------------------------------------------------------
+# Claude Code 环境配置文件（项目特定，不应提交）
+# -----------------------------------------------------------
+# .env.skill: 存储项目特定环境配置（测试/生产集群、namespace等）
+# 每个开发者维护自己的副本，参考 DevOps SKILL.md 中的环境配置管理规则
+.env.skill
+.claude/skills/.env.skill
+
+# Backup files（编辑器自动生成的备份文件）
+*.backup
+*.bak
+*.orig
+*~
+*.before-fix
+.claude/scheduled_tasks.json

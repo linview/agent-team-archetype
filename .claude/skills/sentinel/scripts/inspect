@@ -1,0 +1,319 @@
+#!/bin/bash
+# ============================================================
+# Resource Meter Sentinel - 简化巡检命令
+# ============================================================
+# 功能：提供简洁的命令行接口执行 Resource Meter 巡检
+# 用法：./inspect [LEVEL] [ENV]
+# 示例：
+#   ./inspect sanity prod          # 健全巡检生产环境
+#   ./inspect 健全 巡检 生产环境  # 中文参数
+#   ./inspect smoke test           # 冒烟测试测试环境
+# ============================================================
+
+set -e
+
+# ============================================================
+# 脚本目录定位
+# ============================================================
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# 从 .claude/skills/sentinel/ 上 3 级到项目根目录
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
+ENV_FILE="${PROJECT_ROOT}/.env.skill"
+INSPECTION_SCRIPT="${SCRIPT_DIR}/run_inspection.sh"
+
+# ============================================================
+# 颜色定义
+# ============================================================
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# ============================================================
+# 辅助函数
+# ============================================================
+
+# 打印成功信息
+info() {
+    echo -e "${GREEN}✓ $1${NC}"
+}
+
+# 打印警告信息
+warn() {
+    echo -e "${YELLOW}⚠ $1${NC}"
+}
+
+# 打印错误信息
+error() {
+    echo -e "${RED}✗ $1${NC}"
+}
+
+# 打印信息
+msg() {
+    echo -e "${BLUE}ℹ $1${NC}"
+}
+
+# 显示帮助信息
+show_help() {
+    cat <<EOF
+${GREEN}Resource Meter Regular-Checker${NC}
+简化命令行接口 - 一条命令完成巡检
+
+${YELLOW}用法:${NC}
+  ./inspect [LEVEL] [ENV]
+
+${YELLOW}参数:${NC}
+  LEVEL   巡检级别（可选）：smoke / sanity / full
+          旧名称兼容：quick / standard / deep
+          支持中文：冒烟 / 健全 / 完整 / 快速 / 标准 / 深度
+  ENV     环境（可选）：dev / test / prod
+          支持中文：开发 / 测试 / 生产
+
+${YELLOW}示例:${NC}
+  # 健全性测试生产环境
+  ./inspect sanity prod
+
+  # 冒烟测试测试环境
+  ./inspect smoke test
+
+  # 完整测试生产数据
+  ./inspect full prod
+
+  # 旧名称兼容（自动映射）
+  ./inspect standard prod   # → sanity
+  ./inspect quick prod      # → smoke
+
+${YELLOW}默认值:${NC}
+  LEVEL: sanity
+  ENV:   test
+
+${YELLOW}配置文件:${NC}
+  ${ENV_FILE}
+  (项目根目录的 .env.skill 文件，统一管理 SKILL 配置)
+
+${YELLOW}环境变量:${NC}
+  所有配置通过 export 导出，供 run_inspection.sh 使用
+
+${YELLOW}更多信息:${NC}
+  查看 SKILL.md 文档
+
+EOF
+}
+
+# 解析中文级别参数
+parse_level() {
+    local level="$1"
+    case "$level" in
+        smoke|*冒烟*|*smoke-check*|quick|*快速*|*quick-check*)
+            echo "smoke"
+            ;;
+        sanity|*健全*|*sanity-check*|standard|*标准*|*standard-check*)
+            echo "sanity"
+            ;;
+        full|*完整*|*full-check*|deep|*深度*|*deep-check*)
+            echo "full"
+            ;;
+        *)
+            echo ""
+            ;;
+    esac
+}
+
+# 解析中文环境参数
+parse_env() {
+    local env="$1"
+    case "$env" in
+        *dev*|*开发*|*development*|*local*)
+            echo "dev"
+            ;;
+        *test*|*测试*|*testing*)
+            echo "test"
+            ;;
+        *prod*|*生产*|*production*)
+            echo "prod"
+            ;;
+        *)
+            echo ""
+            ;;
+    esac
+}
+
+# 加载环境配置（从 .env.skill 文件）
+load_config() {
+    local env="$1"
+    local env_file="$2"
+
+    # 检查配置文件是否存在
+    if [[ ! -f "$env_file" ]]; then
+        error "配置文件不存在: $env_file"
+        echo ""
+        echo "请先创建配置文件："
+        echo "  cat > $env_file <<EOF"
+        echo "# $env 环境"
+        echo "UPPERCASE_API_URL=http://..."
+        echo "UPPERCASE_DB_HOST=..."
+        echo "UPPERCASE_DB_PORT=..."
+        echo "UPPERCASE_DB_NAME=..."
+        echo "UPPERCASE_DB_USER=..."
+        echo "UPPERCASE_DB_PASSWORD=..."
+        echo "UPPERCASE_KUBECONFIG=/path/to/kubeconfig"
+        echo "EOF"
+        return 1
+    fi
+
+    msg "加载配置: $env 环境"
+
+    # 根据环境读取对应的配置前缀
+    local prefix
+    case "$env" in
+        dev)   prefix="DEV" ;;
+        test)  prefix="TEST" ;;
+        prod)  prefix="PROD" ;;
+        *)
+            error "不支持的环境: $env"
+            return 1
+            ;;
+    esac
+
+    # 从 .env.skill 读取配置（source 模式）
+    # 需要先将环境配置读取为临时变量，再 export
+    local api_url db_host db_port db_name db_user db_password kubeconfig
+
+    api_url=$(grep "^${prefix}_API_URL=" "$env_file" 2>/dev/null | cut -d'=' -f2)
+    db_host=$(grep "^${prefix}_DB_HOST=" "$env_file" 2>/dev/null | cut -d'=' -f2)
+    db_port=$(grep "^${prefix}_DB_PORT=" "$env_file" 2>/dev/null | cut -d'=' -f2)
+    db_name=$(grep "^${prefix}_DB_NAME=" "$env_file" 2>/dev/null | cut -d'=' -f2)
+    db_user=$(grep "^${prefix}_DB_USER=" "$env_file" 2>/dev/null | cut -d'=' -f2)
+    db_password=$(grep "^${prefix}_DB_PASSWORD=" "$env_file" 2>/dev/null | cut -d'=' -f2)
+    kubeconfig=$(grep "^${prefix}_KUBECONFIG=" "$env_file" 2>/dev/null | cut -d'=' -f2)
+
+    # 导出环境变量
+    export RESOURCE_METER_API_URL="$api_url"
+    export DB_HOST="$db_host"
+    export DB_PORT="${db_port:-5432}"
+    export DB_NAME="$db_name"
+    export DB_USER="$db_user"
+    export DB_PASSWORD="$db_password"
+
+    # KUBECONFIG 可选（dev 环境不需要）
+    # ⚠️ 优先级：命令行 > .env.skill
+    # - KUBECONFIG="DISABLED" → 禁用 KUBECONFIG
+    # - KUBECONFIG="" 或未设置 → 从 .env.skill 读取（如果有）
+    # - KUBECONFIG="/path/to/config" → 使用命令行指定值
+    if [[ "$KUBECONFIG" != "DISABLED" ]] && [[ -z "$KUBECONFIG" ]] && [[ -n "$kubeconfig" ]]; then
+        export KUBECONFIG="$kubeconfig"
+    fi
+
+    # 如果设置为 "DISABLED"，则清除环境变量
+    if [[ "$KUBECONFIG" == "DISABLED" ]]; then
+        unset KUBECONFIG
+    fi
+
+    # 验证必需的环境变量
+    if [[ -z "$RESOURCE_METER_API_URL" ]] || [[ -z "$DB_HOST" ]] || [[ -z "$DB_PASSWORD" ]]; then
+        error "配置文件中缺少必需的配置项（${prefix}_API_URL, ${prefix}_DB_HOST, ${prefix}_DB_PASSWORD）"
+        return 1
+    fi
+
+    info "配置加载成功"
+    msg "API URL: $RESOURCE_METER_API_URL"
+    msg "数据库: ${DB_HOST}:${DB_PORT}/${DB_NAME}"
+    if [[ -n "$KUBECONFIG" ]]; then
+        msg "KUBECONFIG: $KUBECONFIG"
+    fi
+
+    return 0
+}
+
+# ============================================================
+# 参数解析
+# ============================================================
+
+# 显示帮助
+if [[ "$1" == "-h" ]] || [[ "$1" == "--help" ]] || [[ "$1" == "help" ]]; then
+    show_help
+    exit 0
+fi
+
+# 解析级别参数
+RAW_LEVEL="$1"
+if [[ -z "$RAW_LEVEL" ]]; then
+    LEVEL="sanity"
+else
+    LEVEL=$(parse_level "$RAW_LEVEL")
+    if [[ -z "$LEVEL" ]]; then
+        # 可能是环境参数（省略级别，直接给环境）
+        PARSED_ENV=$(parse_env "$RAW_LEVEL")
+        if [[ -n "$PARSED_ENV" ]]; then
+            LEVEL="sanity"
+            ENV="$PARSED_ENV"
+            shift
+        else
+            error "无效的级别参数: $RAW_LEVEL"
+            echo ""
+            show_help
+            exit 1
+        fi
+    fi
+fi
+
+# 解析环境参数
+if [[ -z "$ENV" ]]; then
+    RAW_ENV="$2"
+    if [[ -z "$RAW_ENV" ]]; then
+        ENV="test"  # 默认测试环境
+    else
+        ENV=$(parse_env "$RAW_ENV")
+        if [[ -z "$ENV" ]]; then
+            error "无效的环境参数: $RAW_ENV"
+            echo ""
+            show_help
+            exit 1
+        fi
+    fi
+fi
+
+# ============================================================
+# 打印巡检信息
+# ============================================================
+
+echo ""
+echo "=========================================="
+echo "Resource Meter Regular-Checker"
+echo "=========================================="
+msg "级别: $LEVEL"
+msg "环境: $ENV"
+echo ""
+
+# ============================================================
+# 加载配置
+# ============================================================
+
+if ! load_config "$ENV" "$ENV_FILE"; then
+    error "配置加载失败"
+    exit 1
+fi
+
+echo ""
+
+# ============================================================
+# 执行巡检
+# ============================================================
+
+# 检查巡检脚本是否存在
+if [[ ! -f "$INSPECTION_SCRIPT" ]]; then
+    error "巡检脚本不存在: $INSPECTION_SCRIPT"
+    exit 1
+fi
+
+# 确保脚本有执行权限
+chmod +x "$INSPECTION_SCRIPT"
+
+info "开始执行巡检..."
+echo ""
+
+# 调用底层巡检脚本
+exec "$INSPECTION_SCRIPT" "$LEVEL" "$ENV"

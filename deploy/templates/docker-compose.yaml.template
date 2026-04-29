@@ -1,0 +1,83 @@
+version: '3.8'
+
+services:
+  # PostgreSQL 数据库
+  postgres:
+    image: {POSTGRES_IMAGE}
+    container_name: {PROJECT_NAME}-db
+    environment:
+      POSTGRES_DB: {DB_NAME}
+      POSTGRES_USER: {DB_USER}
+      POSTGRES_PASSWORD: {DB_PASSWORD}
+      POSTGRES_INITDB_ARGS: "-E UTF8"
+    ports:
+      - "{DB_PORT_EXTERNAL}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - {DB_INIT_PATH}:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U {DB_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - {PROJECT_NAME}-net
+
+  # Redis 缓存（可选）
+  redis:
+    image: {REDIS_IMAGE}
+    container_name: {PROJECT_NAME}-redis
+    command: redis-server --appendonly yes
+    ports:
+      - "{REDIS_PORT_EXTERNAL}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - {PROJECT_NAME}-net
+
+  # API 服务
+  api:
+    build:
+      context: {PROJECT_ROOT}
+      dockerfile: {DOCKERFILE_PATH}
+    image: {IMAGE_NAME}:{IMAGE_TAG}
+    container_name: {PROJECT_NAME}-api
+    environment:
+      # 数据库配置
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: {DB_USER}
+      DB_PASSWORD: {DB_PASSWORD}
+      DB_NAME: {DB_NAME}
+      # 服务配置
+      SERVER_PORT: {SERVER_PORT}
+      LOG_LEVEL: {LOG_LEVEL}
+    ports:
+      - "{API_PORT_EXTERNAL}:{SERVER_PORT}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - {PROJECT_NAME}-net
+    restart: unless-stopped
+
+# 数据卷
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+# 网络
+networks:
+  {PROJECT_NAME}-net:
+    driver: bridge

@@ -1,0 +1,98 @@
+# ============================================================
+# Resource Meter 生产环境配置模板
+# ============================================================
+# 说明：
+#   - 此文件为配置模板，不应直接使用
+#   - 敏感信息使用环境变量占位符 ${VAR_NAME}
+#   - 部署时通过环境变量或 K8s Secret 注入实际值
+#   - 参考部署文档：docs/deployment/prod-deployment.md
+# ============================================================
+
+Name: resource-meter-api
+Host: 0.0.0.0
+Port: 8082
+Timeout: 200000
+
+# ============================================================
+# 日志配置
+# ============================================================
+LogConf:
+  ServiceName: resource-meter-api
+  Mode: file
+  Path: log
+  Level: info
+  Compress: false
+  KeepDays: 7
+  StackCooldownMillis: 100
+  K8sEventLogLevel: debug
+  K8sEventLogPath: log/k8s-events.log
+
+# ============================================================
+# 数据库配置
+# ============================================================
+# 环境变量：
+#   - DB_HOST: 数据库主机地址
+#   - DB_PORT: 数据库端口
+#   - DB_NAME: 数据库名称
+#   - DB_USER: 数据库用户名
+#   - DB_PASSWORD: 数据库密码（通过 Secret 注入）
+# ============================================================
+DatabaseConf:
+  Type: postgres
+  Host: ${DB_HOST}
+  Port: ${DB_PORT}
+  DBName: ${DB_NAME}
+  Username: ${DB_USER}
+  Password: ${DB_PASSWORD}
+  MaxOpenConns: 50
+  MaxIdleConns: 10
+
+# ============================================================
+# Redis 配置（可选）
+# ============================================================
+RedisConf:
+  Enabled: false
+  Host: ${REDIS_HOST:-localhost:6379}
+  Pass: ${REDIS_PASSWORD:-}
+  DB: ${REDIS_DB:-0}
+
+# ============================================================
+# Kubernetes 集群配置
+# ============================================================
+# 说明：
+#   - K8sApiServerUrl: 生产环境 K8S API Server 地址
+#   - K8sBearerTokenPath: InitContainer 自动获取的 Token 路径
+#   - 监听的 Namespace：example-service, argo, example-org-ray, train-job
+# ============================================================
+Kubeconfig:
+  K8sKubeconfigPath: ""
+  K8sApiServerUrl: ${K8S_API_SERVER_URL}
+  K8sBearerToken: ""
+  K8sBearerTokenPath: /app/secrets/k8s/bearerToken
+  K8sCaFilePath: ./etc/ca.crt
+
+  # 监听的 Namespace（Pod 来源识别）
+  DevPodNamespace: example-service
+  ArgoNamespace: argo
+  RayJobNamespace: example-org-ray
+  TrainJobNamespace: train-job  # ✅ Epic-12: TrainJob 支持
+
+# ============================================================
+# 时区配置（服务层统一使用 UTC+8）
+# ============================================================
+TimezoneConf:
+  Timezone: Asia/Shanghai
+
+# ============================================================
+# MCasbin 权限服务配置
+# ============================================================
+# 环境变量：
+#   - MCASBIN_ENDPOINT: MCasbin gRPC 服务地址
+# ============================================================
+MCasbinConf:
+  Enabled: true
+  Endpoint: ${MCASBIN_ENDPOINT}
+  Timeout: 30s
+  MaxRetry: 3
+  EnableTLS: false
+  EnableTracing: true
