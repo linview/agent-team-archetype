@@ -79,7 +79,18 @@ version: "13.0"
 - **V**aluable: 有价值的，对用户有意义
 - **E**stimable: 可估算的，能评估工时
 - **S**mall: 小的，可在 1-2 周内完成
-- **T**estable: 可测试的，有明确的验收标准
+- **T**estable: AC 包含按实现阶段分层的测试要求（UT/API/SIT/E2E/UAT 标签）
+
+**AC 测试分层策略**（⚠️ 强制规则）：
+
+每个 Story 的验收标准**必须包含测试责任**，按实现阶段和功能粒度分层。核心原则：**测试要求跟随实现阶段，不超前不遗漏**——不可达的测试不作为当前 Story 的阻塞条件。
+
+PM 编写 AC 时必须：
+1. 根据功能类型（基础设施/数据层/服务层/API/前端/跨域/部署）查矩阵确定必须的测试层级
+2. 根据当前实现阶段确定哪些测试可达
+3. 在 AC 中使用 `[UT]`/`[API]`/`[SIT]`/`[E2E]`/`[UAT]` 标签标注测试标准
+
+**🔗 完整策略和矩阵**: 见 [AC 测试分层策略](references/ac_testing_strategy.md)
 
 **拆解粒度**：
 - 最小单元：1-3 个工作日
@@ -147,195 +158,30 @@ version: "13.0"
 
 ## Story 编号管理（⚠️ 强制规则）
 
-**核心职责**：
 - PM **必须**确保所有 Epic 和 Story 编号**唯一且连续**
-- 创建新 Story 时**必须**检查编号冲突
-- 发现冲突**必须立即修复**
+- Epic：`EPIC-{序号}`，Story：`STORY-{epic序号}-{story序号:02d}`
+- 创建新 Story 前**必须**运行冲突检测，发现冲突**必须立即修复**
+- 文件名、front matter id、标题三处编号必须一致
 
-**编号规则**：
-- Epic 编号：`EPIC-{序号}`，从 1 开始递增
-- Story 编号：`STORY-{epic序号}-{story序号:02d}`
-- 每个 Epic 下的 Story 序号从 01 开始，**必须连续且唯一**
-- 示例：`STORY-8-01`, `STORY-8-02`, ..., `STORY-8-08`
-
-**冲突检测命令**（创建新 Story 前必须执行）：
-```bash
-# 1. 检查 Story 文件名编号重复
-ls -1 {project_docs}/scrum/story/story-*.md | awk -F'-' '{print $1 "-" $2 "-" $3}' | sort | uniq -c | sort -rn
-
-# 2. 检查 Epic 文件名编号重复
-ls -1 {project_docs}/scrum/prd/epic-*.md | awk -F'-' '{print $1 "-" $2}' | sort | uniq -c | sort -rn
-
-# 3. 验证 front matter 中的 ID 与文件名一致
-grep -r "^id: \"STORY" {project_docs}/scrum/story/*.md | sort
-```
-
-**创建新 Story 流程**（强制执行）：
-```bash
-# Step 1: 确定新 Story 所属 Epic
-EPIC_NUM=8
-
-# Step 2: 查找该 Epic 下当前最大的 Story 编号
-MAX_STORY_NUM=$(ls -1 {project_docs}/scrum/story/story-${EPIC_NUM}-*.md | \
-  sed -E "s|.*/story-${EPIC_NUM}-([0-9]+)-.*\.md|\1|" | sort -rn | head -1)
-
-# Step 3: 计算新 Story 编号（递增 1）
-NEW_STORY_NUM=$(printf "%02d" $((10#$MAX_STORY_NUM + 1)))
-NEW_STORY_ID="STORY-${EPIC_NUM}-${NEW_STORY_NUM}"
-
-# Step 4: 验证编号未被占用
-[ ! -f "{project_docs}/scrum/story/story-${EPIC_NUM}-${NEW_STORY_NUM}-*.md" ]
-
-# Step 5: 创建 Story 文件（使用模板）
-cp {skill_path}/templates/story_template.md \
-   {project_docs}/scrum/story/story-${EPIC_NUM}-${NEW_STORY_NUM}-short-description.md
-
-# Step 6: 更新对应的 Epic 文件，添加新 Story 到 stories 列表
-# Step 7: 运行冲突检测命令验证
-```
-
-**编号冲突修复流程**：
-```bash
-# 解决方案 1: 使用 git mv 重命名文件（保留历史，推荐）
-git mv {project_docs}/scrum/story/story-8-06-old-name.md \
-        {project_docs}/scrum/story/story-8-07-new-name.md
-
-# 解决方案 2: 更新文件内容中的 ID
-sed -i 's/^id: "STORY-8-06"/id: "STORY-8-07"/' {project_docs}/scrum/story/story-8-06-*.md
-
-# 验证修复
-grep -r "^id: \"STORY-8-0" {project_docs}/scrum/story/ | sort
-```
-
-**编号管理检查清单**（创建新 Story 时强制执行）：
-- [ ] 运行冲突检测命令，确认无编号重复
-- [ ] 查询当前 Epic 下最大的 Story 编号
-- [ ] 新 Story 编号 = 最大编号 + 1
-- [ ] 文件名、front matter id、标题三处编号一致
-- [ ] Epic 文件的 stories 列表已更新
-- [ ] 重新运行冲突检测命令验证
-
-**🔗 详细命令和流程**: 见 `{skill_path}/references/story_numbering_rules.md`
-
-**常见错误及后果**：
-| 错误类型 | 示例 | 后果 | 严重性 |
-|---------|------|------|--------|
-| Story 编号重复 | STORY-8-05 出现 2 次 | Story 追踪混乱，无法评估进度 | 🔴 高 |
-| 编号不连续 | STORY-8-01, STORY-8-03（跳过 02） | 查找困难，破坏 Story 链 | 🟡 中 |
-| 文件名与 ID 不一致 | 文件名 `story-8-05-*.md` 但 ID 是 `STORY-8-06` | 索引错误，引用混乱 | 🔴 高 |
-| Epic stories 列表遗漏 | Epic-8 只列了 5 个 Story，实际有 8 个 | DASHBOARD/KANBAN 数据不完整 | 🟡 中 |
+**🔗 详细命令、创建流程和冲突修复**: 见 [Story 编号管理规则](references/story_numbering_rules.md)
 
 ---
 
 ## Epic 文件管理规范（⚠️ 强制规则）
 
-**核心职责**：
-- PM **必须**确保 Epic 文件的 metadata 格式完整且一致
-- Epic 的 stories 列表**必须**与实际 Story 文件数量**完全一致**
-- Epic metadata **必须**包含所有必需字段
+- Epic 命名：`epic-{序号}-{简短描述}.md`，序号唯一且连续，kebab-case 描述
+- Epic metadata 包含 11 个必需字段（id/title/description/status/priority/layer/owner/start_date/target_date/stories/dependencies）
+- `stories` 数组**必须**与实际 Story 文件数量**完全一致**
+- `layer` 分类：INFRA / DATA_LAYER / SERVICE_LAYER / APP_LAYER / CROSS_LAYER
 
-### Epic 命名规范
-
-**格式**：`epic-{序号}-{简短描述}.md`
-- **序号**：从 1 开始递增，唯一且连续
-- **简短描述**：使用连字符分隔的英文描述，kebab-case
-- **示例**：`epic-15-data-layer-optimization-v4.1.md`
-
-**❌ 禁止的命名方式**：
-- ❌ 重复的 Epic 编号（如 `epic-15-*.md` 出现 2 次）
-- ❌ 描述性语言命名的临时文件（如 `epic-15-dag-analysis.md`）
-- ❌ 使用日期作为版本号（如 `epic-15-20260204.md`）
-
-### Epic YAML metadata 规范
-
-**必需字段**（11 个）：
-```yaml
----
-id: "EPIC-{序号}"
-title: "Epic 标题"
-description: "Epic 简短描述（1-2 句话）"
-status: "TODO"  # TODO/IN_PROGRESS/COMPLETED/BLOCKED/CANCELLED
-priority: "P1"  # P0/P1/P2/P3
-layer: "INFRA"  # 架构层次分类: INFRA/DATA_LAYER/SERVICE_LAYER/APP_LAYER/CROSS_LAYER
-owner: "owner@example.com"
-start_date: "2026-XX-XX"
-target_date: "2026-XX-XX"
-completed_date: ""  # 可选，仅在 status=COMPLETED 时填写
-stories:
-  - "STORY-{序号}-01"
-  - "STORY-{序号}-02"
-  # ... 列出所有 Story ID
-dependencies:
-  - "EPIC-{序号}"  # 依赖的其他 Epic ID（可选）
-tags: []
-version: "1.0"
-created_at: "2026-XX-XX"
-updated_at: "2026-XX-XX"
----
-```
-
-**字段说明**：
-- **status**：Epic 状态（TODO/IN_PROGRESS/COMPLETED/BLOCKED/CANCELLED）
-- **priority**：优先级（P0/P1/P2/P3），P0 最高
-- **layer**：架构层次分类
-  - `INFRA`：基础设施相关（Docker、K8s、CI/CD）
-  - `DATA_LAYER`：数据层相关（数据库、DAO、数据模型）
-  - `SERVICE_LAYER`：服务层相关（Informer、业务逻辑）
-  - `APP_LAYER`：应用层相关（API、网关）
-  - `CROSS_LAYER`：跨层功能（监控、日志、安全）
-- **stories**：**关键**，必须列出该 Epic 下的所有 Story ID
-- **dependencies**：依赖的其他 Epic ID（可选）
-
-### Epic-Story 一致性验证（⚠️ 强制检查）
-
-**辅助脚本**：
-```bash
-# 运行一致性验证脚本
-{skill_path}/scripts/epic_story_consistency_check.sh
-```
-
-**验证命令**：
-```bash
-# 1. 检查 Epic 文件中的 stories 数量是否与实际 Story 文件数量一致
-for epic_file in {project_docs}/scrum/prd/epic-*.md; do
-  epic_num=$(basename "$epic_file" | sed -E 's/epic-([0-9]+)-.*/\1/')
-  epic_stories=$(grep -A 100 "^stories:" "$epic_file" | grep -c "STORY-${epic_num}-")
-  actual_stories=$(ls -1 {project_docs}/scrum/story/story-${epic_num}-*.md 2>/dev/null | wc -l)
-  
-  if [ "$epic_stories" -ne "$actual_stories" ]; then
-    echo "❌ Epic-${epic_num}: stories 列表数量 ($epic_stories) != 实际文件数量 ($actual_stories)"
-  fi
-done
-
-# 2. 验证所有 Story ID 都在 Epic 的 stories 列表中
-for story_file in {project_docs}/scrum/story/story-*.md; do
-  story_id=$(grep "^id: \"" "$story_file" | sed 's/id: "\(.*\)"/\1/')
-  epic_num=$(echo "$story_id" | cut -d'-' -f2)
-  epic_file="{project_docs}/scrum/prd/epic-${epic_num}-*.md"
-  
-  if ! grep -q "$story_id" "$epic_file"; then
-    echo "❌ $story_id 未在 Epic-${epic_num} 的 stories 列表中"
-  fi
-done
-```
-
-**一致性检查清单**（创建/更新 Epic 时强制执行）：
-- [ ] Epic 的 stories 数组包含所有 Story ID
-- [ ] stories 数量 = 实际 Story 文件数量
-- [ ] 每个 Story ID 都能在 Epic 的 stories 列表中找到
+**Epic-Story 一致性检查清单**（创建/更新 Epic 时强制执行）：
+- [ ] stories 数组包含所有 Story ID，数量 = 实际 Story 文件数量
+- [ ] 每个 Story ID 都能在 stories 列表中找到
 - [ ] Epic status 与 Story 完成比例一致
-- [ ] 无重复的 Epic 编号
-- [ ] Epic metadata 包含所有必需字段
+- [ ] Epic body checkbox 与 Story 实际状态同步（`- [x]` 对应 COMPLETED）
+- [ ] 无重复 Epic 编号，metadata 包含所有必需字段
 
-**常见错误及后果**：
-| 错误类型 | 示例 | 后果 | 严重性 |
-|---------|------|------|--------|
-| Epic stories 列表不完整 | Epic-15 只列了 4 个 Story，实际 12 个 | DASHBOARD 数据不准确，进度追踪失效 | 🔴 高 |
-| Epic 编号重复 | epic-15-*.md 出现 2 次 | Epic 追踪混乱，优先级判断错误 | 🔴 高 |
-| 缺少 stories 数组 | Epic metadata 无 stories 字段 | 无法统计 Epic 进度，DASHBOARD 空白 | 🔴 高 |
-| Story 未在 Epic 中列出 | STORY-15-22 存在但 Epic-15 stories 无此 ID | Story 成为孤儿，无法关联 Epic | 🟡 中 |
-
-**🔗 详细命令和流程**: 见 `{skill_path}/templates/epic_template.md`
+**🔗 YAML 模板和验证命令**: 见 [Epic 模板](templates/epic_template.md)
 
 ---
 
@@ -345,10 +191,31 @@ done
 
 **证据链完整性**:
 ```
-Git Commit Evidence → Code Verification → Production Verification → Story Status Update → DASHBOARD/KANBAN Sync
+Git Commit Evidence → Code Verification → Production Verification → Story Status Update → Epic Checkbox Sync → DASHBOARD/KANBAN Sync
 ```
 
-### 5-Step 流程概要
+### AC 签字铁律（强制执行）
+
+**核心原则**：状态流转 = AC 签字率达标，不达标不流转。
+
+| 目标状态 | AC 签字率 | Task 签字率 | 前置条件 |
+|---------|----------|------------|---------|
+| IN_PROGRESS | ≥ 0% | ≥ 0% | 至少 1 条 Task 已勾选（开发启动标志） |
+| IN_REVIEW | ≥ 80% | ≥ 50% | 所有功能标准 AC 已勾选 |
+| TESTING | 100% | ≥ 80% | 全部 AC 已勾选，测试标准 AC 已验证 |
+| COMPLETED | 100% | 100% | 全部 AC + Task 已勾选，QA 验证通过 |
+
+**禁止事项**：
+- ❌ AC 签字率 < 100% 就标记 COMPLETED
+- ❌ 批量修改状态（必须逐 Story 验证后修改）
+- ❌ 不留证据就勾选（每条勾选对应 git commit）
+
+**签字证据**：
+- 功能类 AC：代码实现 commit 即为证据
+- 测试类 AC：测试通过 commit 即为证据
+- 证据格式：在 Story frontmatter 的 `verification_evidence` 字段记录 commit short SHA（7 位，如 `["d45bb35"]`）
+
+### 6-Step 流程概要
 
 **Step 1: Git Log Timeline 回溯分析**
 - 时机: 每次更新 Story 状态前、每周五下午项目审计
@@ -371,7 +238,30 @@ Git Commit Evidence → Code Verification → Production Verification → Story 
 - 批量命令: `sed -i 's/^status: "TODO"/status: "COMPLETED"/' "$file"`
 - 日期更新: `sed -i "/^---/a completed_date: \"$(date +%Y-%m-%d)\"" "$file"`
 
-**Step 5: DASHBOARD/KANBAN 同步**
+**Step 5: Epic Body Checkbox 同步（⚠️ 强制执行）**
+- 时机: Story 状态修正后、DASHBOARD/KANBAN 同步前
+- 原因: Epic body 中的 Story 列表是团队进度的直观展示，checkbox 不同步会导致进度误判
+
+**同步操作**：
+1. **更新 Story checkbox**：根据 Story 最终状态，将 Epic body 中对应行的 `- [ ]` 改为 `- [x]`（COMPLETED）或保持 `- [ ]`（TODO/IN_PROGRESS 等）
+2. **补充缺失条目**：如果 Epic frontmatter 的 `stories` 列表中有 Story ID 但 body 中没有对应行，必须补充条目
+3. **更新 Epic AC checkbox**：根据 Epic 内 Story 完成度，将验收标准中已满足的条目打钩（`- [ ]` → `- [x]`）。当 Epic 内所有 Story 均 COMPLETED 时，AC 应全部打钩
+4. **验证一致性**：确保 body 的 Story 列表行数 = frontmatter `stories` 数组长度
+
+```bash
+# 验证每个 Epic 的 checkbox 与 Story 状态一致
+for epic_file in {project_docs}/scrum/prd/epic-*.md; do
+  echo "=== $(basename $epic_file) ==="
+  grep "\- \[[ x]\] STORY" "$epic_file"
+done
+```
+
+**禁止事项**：
+- ❌ 更新 Story status 后不更新 Epic checkbox
+- ❌ Epic body 缺少新增 Story 的条目
+- ❌ checkbox 状态与 Story 实际状态不一致
+
+**Step 6: DASHBOARD/KANBAN 同步**
 - 时机: Story 状态修正后立即同步
 - 同步清单: DASHBOARD.md（Epic 进度、Story 统计） + KANBAN.md（看板列数据、分布统计）
 - 验证: `grep -c 'status: "COMPLETED"' {project_docs}/scrum/story/*.md`
@@ -411,6 +301,7 @@ Git Commit Evidence → Code Verification → Production Verification → Story 
    - [ ] 确认每个 Story 都在对应 Epic 的 stories 列表中
    - [ ] 检查 Epic 编号是否唯一且连续
    - [ ] 验证 Epic metadata 包含所有必需字段
+   - [ ] **验证 Epic body checkbox 与 Story 实际状态一致**（`- [x]` 对应 COMPLETED，`- [ ]` 对应非 COMPLETED）
 5. [ ] 更新 DASHBOARD/KANBAN 反映真实进度
 6. [ ] 清理冗余文件（test_reports/, 临时分析报告）
 
@@ -420,275 +311,63 @@ Git Commit Evidence → Code Verification → Production Verification → Story 
 
 ## Design Spec 演进规则（⚠️ 强制规则）
 
-**核心原则**：
-- 🎯 **Design Spec 是唯一真实来源**：所有开发/测试活动来源于 `{project_docs}/design/`
-- 📈 **Design Spec 持续演进**：`{project_docs}/design/` 下为**当前版本**，过期版本移至 `archive/`
-- 🔄 **Scrum 是过程管理**：Epic/Story 是实现 Design Spec 的手段，非源头
+Design Spec 是唯一真实来源，Epic/Story 是实现手段。版本更新时的核心规则：
 
-**演进规则**（当 Design Spec 版本更新时，如 v3.3 → v4.0）：
+1. **新版本默认生效**：新 Design Spec → 新 Epic/Story
+2. **取消旧 Story 并记录追溯**：`cancel_reason` / `replaced_by` / `cancel_date`
+3. **已完成工作保留**：COMPLETED 状态不可篡改
+4. **版本引用更新**：IN_PROGRESS Story 遇验收标准冲突 → 立即 BLOCKED；仅版本描述不一致 → 更新描述继续
 
-### 规则 1: 默认应用新版本
-新 Design Spec 版本 → 新 Epic/Story 方案默认生效
-
-### 规则 2: 取消旧 Story，确保可追溯
-旧版本未完成 Story → 取消并记录替换关系（`cancel_reason`, `replaced_by`, `cancel_date`）
-
-### 规则 3: 已完成工作保留
-已完成 Story 状态不可篡改（COMPLETED/IN_REVIEW/TESTING）
-
-### 规则 4: 版本升级处理流程
-1. 确认 Design Spec 版本（`ls {project_docs}/design/`）
-2. 应用新 Epic/Story（创建新 Epic，标记旧 Story CANCELLED）
-3. 更新 Epic 状态（SUPERSEDED）
-4. 同步 DASHBOARD/KANBAN
-
-**🔗 详细操作流程**: 见 `{skill_path}/references/design_spec_evolution_rules.md`
-
-**验证清单**（创建新 Epic 前必须执行）：
-- [ ] 检查 `{project_docs}/design/` 下是否有相关功能的最新版本
-- [ ] 确认是否为新版本演进（而非重复创建）
-- [ ] 如果是演进，应用规则 1~4
-- [ ] 确保可追溯性（记录替换关系、取消原因）
-
-### 规则 5: Story 引用 Design Spec version 更新规则
-
-**触发时机**：Design Spec 版本更新（如 v4.1.1 → v4.1.2）
-
-**检查清单**（3 项）：
-1. **版本描述一致性**：描述版本号（如"v4.1.1"）与链接版本号（如"v4.1.2.md"）是否一致
-2. **验收标准有效性**：Story 验收标准在最新 Design Spec 中是否仍然有效
-3. **章节号存在性**：Story 引用的章节号（如"第 11.4 节"）在最新 Design Spec 中是否存在
-
-**分状态处理**：
-
-| Story 状态 | 版本描述不一致 | 验收标准/章节号冲突 | 全部匹配 |
-|-----------|---------------|-------------------|---------|
-| **COMPLETED/DONE** | ✅ 不更新 | ✅ 不更新 | ✅ 不更新 |
-| **TODO** | 更新版本描述 | `status: BLOCKED` + 呼唤人 review | 更新版本描述（可选） |
-| **IN_PROGRESS** | 更新版本描述（不暂停） | **立即暂停** + `status: BLOCKED` + 呼唤人 review | 更新版本描述（继续工作） |
-
-**关键原则**：
-- ✅ **版本描述不一致 ≠ 冲突**：只需更新描述，不需要 BLOCKED
-- 🔴 **验收标准冲突 = 立即暂停**：IN_PROGRESS Story 必须立即停止工作
-- 📋 **呼唤人机制**：在 Story 中添加 `block_reason: "等待 Design Spec review: 与 v4.1.2 冲突"`
+**🔗 完整规则和 Story 引用更新矩阵**: 见 [Design Spec 演进规则](references/design_spec_evolution_rules.md)
 
 ---
 
-## 文档质量管理（⚠️ 强制规则）
+## 文档质量管理
 
-### 文档退化防护机制
+DASHBOARD.md 和 KANBAN.md 是衍生视图，禁止直接修改。数据源是 `{project_docs}/scrum/prd/` 和 `{project_docs}/scrum/story/`。
 
-**核心原则**：
-- 🛡️ **模板保护**：自动化脚本必须基于模板，不能随意覆盖
-- ✅ **格式验证**：每次更新后必须验证格式完整性
-- 🔍 **退化检测**：比较更新前后的内容，拒绝退化更新
-- 📊 **SSOT 数据源**：`metadata.json` 作为唯一真实来源
+更新流程：修改源文件 → 运行 `{skill_path}/scripts/audit_and_render.sh` → 验证格式 → 分离提交。
 
-### 自动化渲染工具
-
-**核心脚本**：
-- `audit_and_render.sh`: 审计和渲染入口脚本
-- `audit_metadata.py`: 扫描 Epic/Story 生成 metadata.json
-- `kanban_renderer.py`: Unicode 泳道渲染器（P0 高亮 + 优先级排序）
-- `render_views.py`: 视图渲染主逻辑
-
-**渲染特性**：
-- ✅ KANBAN: 统计摘要在前 + 独立泳道代码块 + P0 双线边框
-- ✅ DASHBOARD: 进度条（█░） + 表格无空行（-% 标签）
-- ✅ 显示优化：每泳道 20 items + 优先级排序（P0>P1>P2）
-
-### 文档更新流程（⚠️ 强制执行）
-
-**Step 1: 更新源文件**
-- 修改 Story 状态时，必须先更新 `{project_docs}/scrum/story/story-*.md`
-- 修改 Epic 状态时，必须先更新 `{project_docs}/scrum/prd/epic-*.md`
-
-**Step 2: 运行渲染脚本**
-```bash
-# ✅ 手动触发（推荐）
-./{skill_path}/scripts/audit_and_render.sh
-```
-
-**Step 3: 验证格式**
-- KANBAN.md: 约 323 行，统计在前 + 独立泳道
-- DASHBOARD.md: 约 139 行，表格无空行 + 进度条
-
-**Step 4: 分离提交**
-```bash
-# 提交 1: 工具脚本变更
-git add {skill_path}/scripts/*.py
-git commit -m "STORY-XX-XX: 文档工具更新"
-
-# 提交 2: 生成的文档
-git add {project_docs}/scrum/metadata.json {project_docs}/scrum/KANBAN.md {project_docs}/scrum/DASHBOARD.md
-git commit -m "STORY-XX-XX: 更新文档视图"
-```
-
-### 禁止事项
-
-- ❌ **禁止直接修改 metadata.json**
-- ❌ **禁止手动修改 KANBAN.md/DASHBOARD.md 的状态数据**
-- ❌ **禁止绕过格式验证直接提交**
-- ❌ **禁止忽略文档格式测试失败**
-
-### 文档质量检查清单
-
-**更新前必须执行**：
-- [ ] 运行 `audit_and_render.sh`
-- [ ] 检查 KANBAN.md 行数（约 323 行）
-- [ ] 检查 DASHBOARD.md 行数（约 139 行）
-- [ ] 验证统计摘要存在（Epic 总数 + 生成时间）
-- [ ] 验证 P0 Story 有双线边框（╔═╗）和 🔴 标记
+**🔗 完整的渲染工具、验证命令和检查清单**: 见 [文档质量管理指南](references/document_quality_guide.md)
 
 ---
 
-## 代码审查流程
+## 代码审查与检查清单
 
-### Commit Message 规范
+Commit 必须包含 Story ID。审查覆盖代码质量、文档完整性、测试验证、Story 同步、编号一致性五个维度。
 
-**强制格式**：必须包含 Story ID
-
-```
-<Story ID>: <简短描述>
-
-详细描述:
-- 实现内容
-- 测试结果
-- 状态变更
-
-Story Status: 当前状态 → 目标状态
-```
-
-**示例**：
-```
-STORY-6-01: 实现 K8s Informer 工厂
-
-实现内容:
-- factory.go: NewFactory() 函数
-- pod_informer.go: NewPodInformer() 函数
-
-测试结果:
-- 单元测试: 5/5 通过
-- 集成测试: 3/3 通过
-
-Story Status: TODO → IN_PROGRESS
-Design: 100% ✅
-Implement: 80% 🚧
-Test: 50% 🚧
-```
-
-### 状态更新规则
-
-| 代码交付情况 | Design | Implement | Test | Story 状态 |
-|------------|--------|-----------|------|-----------|
-| 代码框架搭建完成 | 100% | 25% | 0% | IN_PROGRESS |
-| 核心功能实现 | 100% | 50% | 0% | IN_PROGRESS |
-| 单元测试通过 | 100% | 75% | 50% | IN_REVIEW |
-| 代码审查通过 | 100% | 75% | 50% | IN_REVIEW |
-| 集成测试通过 | 100% | 100% | 75% | TESTING |
-| 验收测试通过 | 100% | 100% | 100% | COMPLETED |
-
----
-
-## 审查检查清单
-
-PM 审查代码时，必须检查：
-
-**代码质量**：
-- [ ] 代码符合项目规范（参考 Developer SKILL）
-- [ ] 单元测试覆盖率 > 80%
-- [ ] 无明显性能问题
-- [ ] 无安全漏洞
-
-**文档完整性**：
-- [ ] 设计文档已更新
-- [ ] API 文档已更新（如适用）
-- [ ] 注释清晰完整
-
-**测试验证**：
-- [ ] 单元测试全部通过
-- [ ] 集成测试全部通过
-- [ ] 验收标准满足
-
-**Story 同步**：
-- [ ] Story frontmatter 状态已更新
-- [ ] DASHBOARD.md 已同步
-- [ ] KANBAN.md 已同步
-
-**编号一致性**（⚠️ 强制检查）：
-- [ ] 无 Story 编号重复（运行冲突检测命令）
-- [ ] 编号连续且唯一
-- [ ] 文件名、front matter id、标题三处编号一致
-- [ ] Epic 的 stories 列表完整且正确
-
----
-
-## 关键资源
-
-**SKILL 文档**：
-- `.claude/skills/arch/SKILL.md` - 架构设计技能和 Design Spec 管理
-- `.claude/skills/dev/SKILL.md` - 开发测试规范和代码质量标准
-- `.claude/skills/qa/SKILL.md` - QA 工作流程和测试规范
-- `.claude/skills/devops/SKILL.md` - DevOps 工作技能和部署流程
-
-**项目文档**：
-- `CLAUDE.md` - 项目概述和核心架构
-- `tests/sit/README.md` - SIT 测试使用指南
-
-**PRD 和 Story**：
-- `{project_docs}/scrum/prd/README.md` - Epic 规划
-- `{project_docs}/scrum/story/README.md` - Story 管理规范
-
-**模板文件**：
-- `{skill_path}/templates/README.md` - 目录结构和命名规范
-
----
-
-## 占位符说明
-
-**说明**：
-- `{project_docs}`: 项目文档目录（通常为 `docs/`）
-- `{skill_path}`: SKILL 目录路径（如 `.claude/skills/scrum_master/`）
-- `{epic_num}`: Epic 序号（如 8, 15）
-- `{story_num}`: Story 序号（两位数，如 01, 02）
-- `{date}`: 日期格式（如 20260428）
+**🔗 Commit 格式、示例和完整检查清单**: 见 [代码审查指南](references/code_review_guide.md)
 
 ---
 
 ## 附加资源
 
 **详细参考文档**（按需加载）：
-- [Design Spec 演进规则](references/design_spec_evolution_rules.md) - Design Spec 版本更新和 Story 管理规则
-- [Story 编号管理规则](references/story_numbering_rules.md) - Epic/Story 编号冲突检测和修复流程
-- [Story 状态更新工作流](references/story_status_update_workflow.md) - 5-Step 证据驱动的状态更新流程
+- [Design Spec 演进规则](references/design_spec_evolution_rules.md) - 版本更新和 Story 管理规则
+- [Story 编号管理规则](references/story_numbering_rules.md) - 编号冲突检测和修复流程
+- [Story 状态更新工作流](references/story_status_update_workflow.md) - 6-Step 证据驱动的状态更新流程
+- [AC 测试分层策略](references/ac_testing_strategy.md) - 测试层级矩阵和 Story 状态对应关系
+- [文档质量管理指南](references/document_quality_guide.md) - 渲染工具、更新流程、检查清单
+- [代码审查指南](references/code_review_guide.md) - Commit 格式、审查检查清单
 
-**辅助脚本**（可执行）：
-- `scripts/audit_and_render.sh` - 审计和渲染入口脚本
-- `scripts/audit_metadata.py` - 扫描 Epic/Story 生成 metadata.json
-- `scripts/kanban_renderer.py` - Unicode 泳道渲染器
-- `scripts/render_views.py` - 视图渲染主逻辑
+**辅助脚本**：`scripts/audit_and_render.sh` / `audit_metadata.py` / `kanban_renderer.py` / `render_views.py`
 
-**模板文件**（供 Claude 使用）：
-- `templates/story_template.md` - Story 模板
-- `templates/epic_template.md` - Epic 模板
-- `templates/dashboard_template.md` - DASHBOARD 模板
-- `templates/kanban_template.md` - KANBAN 模板
-- `templates/sprint_plan_template.md` - Sprint 规划模板
-- `templates/sprint_retro_template.md` - Sprint 回顾模板
-- `templates/todo_template.md` - TODO 模板
+**模板文件**：`templates/` 目录（story / epic / dashboard / kanban / sprint_plan / sprint_retro / todo）
+
+**协作 SKILL**：`arch` / `dev` / `qa` / `devops`
+
+**占位符**：`{project_docs}` = `docs/`，`{skill_path}` = `.claude/skills/pm/`
 
 ---
 
-**版本**: v12.0  
-**更新日期**: 2026-04-29
+**版本**: v13.0
+**更新日期**: 2026-05-18
 
 **更新日志**：
-- v12.0 (2026-04-29): 🎯 **重大重组**：优化章节顺序符合渐进式披露原则
-  - 工作流程提前到第 2 节（高频使用场景）
-  - 强制规则集中（数据唯一真实来源、Story 编号管理、Epic 管理、Story 状态更新、Design Spec 演进）
-  - 精简过长章节（Epic 文件管理规范 174→100 行，文档质量管理 101→40 行）
-  - 保留代码审查能力（简化版代码审查流程 + 审查检查清单）
-  - 移除低价值内容（完成度评估、最佳实践、Story 状态流转图）
-  - 占位符说明和附加资源移到最后
-  - 文件从 881 行压缩到约 650 行（减少 26%）
-- v11.0 (2026-04-29): 重组目录结构符合 Claude Code 官方标准（references/, scripts/, templates/），产品化标准化改造
+- v13.0 (2026-05-18): 精简主文档 750→~500 行，详细内容迁移至 references/
+  - Story 编号管理、Epic 文件管理：删除内联命令，保留规则摘要+链接
+  - Design Spec 演进规则：压缩为 4 条核心规则+链接
+  - 文档质量管理 → 新建 references/document_quality_guide.md
+  - 代码审查与检查清单 → 新建 references/code_review_guide.md
+- v12.1 (2026-05-18): 新增 Epic Body Checkbox 同步步骤
+- v12.0 (2026-04-29): 重大重组，渐进式披露优化

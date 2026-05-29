@@ -22,6 +22,10 @@ story_points: 3
 assignee: "developer@example.com"
 start_date: "2026-XX-XX"
 target_date: "2026-XX-XX"
+completed_date: ""
+verified_by: ""
+verification_date: ""
+verification_evidence: []
 dependencies: []
 tags: []
 version: "1.0"
@@ -41,9 +45,20 @@ updated_at: "2026-XX-XX"
 
 ## 验收标准
 
+### 功能标准
 - [ ] 标准 1
 - [ ] 标准 2
 - [ ] 标准 3
+
+### 测试标准（按实现阶段）
+- [ ] **[UT]** 覆盖率 >= 75%，通过率 100%
+<!-- 根据功能类型和实现阶段选择以下标签：
+- [ ] **[API]** Handler 测试覆盖正常/异常/边界路径
+- [ ] **[SIT]** 集成环境下跨模块交互验证
+- [ ] **[E2E]** 前后端联调验证
+- [ ] **[UAT]** 用户场景验收
+详见: .claude/skills/pm/references/ac_testing_strategy.md
+-->
 
 ## 实施计划
 

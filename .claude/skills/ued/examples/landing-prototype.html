@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Prototype - Landing Page</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+      background: #0a0a0a;
+      color: #e5e5e5;
+      line-height: 1.6;
+    }
+    /* Nav */
+    nav { display: flex; align-items: center; justify-content: space-between; padding: 20px 48px; position: absolute; top: 0; width: 100%; z-index: 10; }
+    .logo { font-size: 1.25rem; font-weight: 700; background: linear-gradient(135deg, #a78bfa, #60a5fa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .nav-links { display: flex; gap: 32px; }
+    .nav-links a { color: #a3a3a3; text-decoration: none; font-size: 0.9rem; transition: color 0.2s; }
+    .nav-links a:hover { color: #fff; }
+
+    /* Hero */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 120px 24px 80px;
+      background: radial-gradient(ellipse at 50% 0%, rgba(99,102,241,0.15) 0%, transparent 60%);
+    }
+    .hero-badge {
+      display: inline-block;
+      padding: 4px 14px;
+      border-radius: 20px;
+      border: 1px solid rgba(167,139,250,0.3);
+      font-size: 0.8rem;
+      color: #a78bfa;
+      margin-bottom: 24px;
+      animation: fadeUp 0.5s ease;
+    }
+    .hero h1 {
+      font-size: 3.5rem;
+      font-weight: 800;
+      line-height: 1.15;
+      max-width: 700px;
+      animation: fadeUp 0.5s ease 0.1s both;
+    }
+    .hero h1 span { background: linear-gradient(135deg, #a78bfa, #60a5fa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .hero p {
+      font-size: 1.15rem;
+      color: #737373;
+      max-width: 540px;
+      margin-top: 20px;
+      animation: fadeUp 0.5s ease 0.2s both;
+    }
+    .hero-actions {
+      display: flex;
+      gap: 16px;
+      margin-top: 36px;
+      animation: fadeUp 0.5s ease 0.3s both;
+    }
+    .btn-glow {
+      padding: 12px 28px;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+    }
+    .btn-glow.primary {
+      background: linear-gradient(135deg, #7c3aed, #3b82f6);
+      color: white;
+      box-shadow: 0 4px 20px rgba(124,58,237,0.4);
+    }
+    .btn-glow.primary:hover { box-shadow: 0 6px 30px rgba(124,58,237,0.6); transform: translateY(-1px); }
+    .btn-glow.ghost { background: transparent; color: #a3a3a3; border: 1px solid #404040; }
+    .btn-glow.ghost:hover { border-color: #737373; color: #e5e5e5; }
+
+    /* Features */
+    .features {
+      padding: 80px 48px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    .features h2 { text-align: center; font-size: 2rem; font-weight: 700; margin-bottom: 48px; }
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+    .feature-card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 12px;
+      padding: 28px;
+      transition: all 0.3s;
+    }
+    .feature-card:hover { border-color: rgba(167,139,250,0.3); background: rgba(255,255,255,0.05); transform: translateY(-2px); }
+    .feature-icon { font-size: 1.5rem; margin-bottom: 16px; }
+    .feature-card h3 { font-size: 1.05rem; font-weight: 600; margin-bottom: 8px; }
+    .feature-card p { font-size: 0.85rem; color: #737373; line-height: 1.7; }
+
+    /* CTA */
+    .cta {
+      text-align: center;
+      padding: 80px 24px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+    }
+    .cta h2 { font-size: 1.75rem; font-weight: 700; margin-bottom: 12px; }
+    .cta p { color: #737373; margin-bottom: 28px; }
+
+    /* Footer */
+    footer { text-align: center; padding: 32px; color: #525252; font-size: 0.8rem; border-top: 1px solid rgba(255,255,255,0.04); }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <span class="logo">NexusAI</span>
+  <div class="nav-links">
+    <a href="#">功能</a>
+    <a href="#">定价</a>
+    <a href="#">文档</a>
+    <a href="#">博客</a>
+  </div>
+</nav>
+
+<section class="hero">
+  <span class="hero-badge">🚀 v2.0 正式发布</span>
+  <h1>用 <span>AI</span> 重新定义你的工作流</h1>
+  <p>从代码到部署，一站式智能研发平台。自动化重复工作，让团队专注创造价值。</p>
+  <div class="hero-actions">
+    <button class="btn-glow primary" onclick="scrollToFeatures()">开始使用</button>
+    <button class="btn-glow ghost">观看演示 →</button>
+  </div>
+</section>
+
+<section class="features" id="features">
+  <h2>核心能力</h2>
+  <div class="feature-grid">
+    <div class="feature-card">
+      <div class="feature-icon">⚡</div>
+      <h3>智能代码审查</h3>
+      <p>基于上下文理解的代码审查，自动识别潜在问题和改进建议，不遗漏任何细节。</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🔗</div>
+      <h3>全链路追踪</h3>
+      <p>从需求到部署的完整追溯链，一个 ID 查看所有关联的 MR、Commit 和制品。</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📊</div>
+      <h3>质量可视化</h3>
+      <p>实时质量看板，CI/CD 健康状态、测试覆盖率、制品版本一目了然。</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🤖</div>
+      <h3>自动化流水线</h3>
+      <p>配置即代码的 CI/CD 流水线，支持多环境部署和自动回滚。</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🔐</div>
+      <h3>安全合规</h3>
+      <p>内置安全扫描和合规检查，确保每一次发布都符合安全标准。</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📈</div>
+      <h3>数据驱动决策</h3>
+      <p>基于历史数据的智能分析，帮助团队识别瓶颈、优化流程、提升效率。</p>
+    </div>
+  </div>
+</section>
+
+<section class="cta">
+  <h2>准备好提升团队效率了吗？</h2>
+  <p>免费试用 14 天，无需信用卡</p>
+  <button class="btn-glow primary">立即开始</button>
+</section>
+
+<footer>© 2026 NexusAI — 以 AI 驱动研发效率</footer>
+
+<script>
+function scrollToFeatures() {
+  document.getElementById('features').scrollIntoView({ behavior: 'smooth' });
+}
+</script>
+</body>
+</html>

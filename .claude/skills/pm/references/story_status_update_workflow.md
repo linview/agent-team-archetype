@@ -61,7 +61,7 @@ git log --since="30 days ago" -- internal/pkg/k8s/extractor/metadata.go
 git log --since="30 days ago" -- internal/pkg/calculator/gpu_calculator.go
 
 # 方法 3: 按作者搜索
-git log --author="chenhuazhong@example.com" --since="7 days ago"
+git log --author="example-user@example.com" --since="7 days ago"
 ```
 
 **预期输出**: 找到相关的 Commit 记录

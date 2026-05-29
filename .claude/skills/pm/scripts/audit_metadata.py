@@ -228,7 +228,8 @@ def generate_metadata_json(project_root: Path) -> Dict[str, Any]:
 
 def main():
     """主函数"""
-    project_root = Path(__file__).parent.parent.parent.parent
+    script_dir = Path(__file__).resolve().parent
+    project_root = (script_dir / "../../../..").resolve()
 
     print(f"[Scrum Master] 扫描项目: {project_root}")
 

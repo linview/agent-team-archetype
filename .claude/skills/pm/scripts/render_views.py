@@ -137,7 +137,8 @@ def validate_dashboard_format(content: str) -> bool:
 
 def main():
     """主函数"""
-    project_root = Path(__file__).parent.parent.parent.parent
+    script_dir = Path(__file__).resolve().parent
+    project_root = (script_dir / "../../../..").resolve()
 
     print(f"[Scrum Master] 渲染视图: {project_root}")
 
