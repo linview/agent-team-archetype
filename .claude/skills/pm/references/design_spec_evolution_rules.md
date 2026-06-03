@@ -34,16 +34,16 @@
 
 **示例**:
 ```
-docs/design/service_layer_architecture_v4.0.md 存在
+docs/design/{layer}_design_v{new_version}.md 存在
   ↓
-Epic-15（基于 v4.0）默认应用
-Epic-6（基于 v3.3）的未完成 Story 默认取消
+Epic-{N}（基于 v{new_version}）默认应用
+Epic-{M}（基于 v{old_version}）的未完成 Story 默认取消
 ```
 
 **应用场景**:
-- 架构设计从 v3.3 升级到 v4.0
-- 数据库设计从 v2.0 升级到 v3.0
-- API 设计从 v1.5 升级到 v2.0
+- 架构设计从 v{old} 升级到 v{new}
+- 数据库设计从 v{old} 升级到 v{new}
+- API 设计从 v{old} 升级到 v{new}
 
 ---
 
@@ -55,12 +55,12 @@ Epic-6（基于 v3.3）的未完成 Story 默认取消
 
 ```markdown
 ---
-id: "STORY-6-15"
+id: "STORY-{N}-{MM}"
 status: "CANCELLED"
-cancel_reason: "被 v4.0 架构替代"
-replaced_by: "STORY-15-01, STORY-15-02"
-cancel_date: "2026-04-03"
-design_spec_version: "v3.3 → v4.0"
+cancel_reason: "被 v{new_version} 架构替代"
+replaced_by: "STORY-{N2}-{MM1}, STORY-{N2}-{MM2}"
+cancel_date: "{cancel_date}"
+design_spec_version: "v{old} → v{new}"
 ---
 ```
 
@@ -74,11 +74,11 @@ design_spec_version: "v3.3 → v4.0"
 
 ```markdown
 ---
-id: "EPIC-6"
+id: "EPIC-{N}"
 status: "SUPERSEDED"
-superseded_by: "EPIC-15"
-superseded_reason: "Design Spec v3.3 → v4.0 演进"
-superseded_date: "2026-04-03"
+superseded_by: "EPIC-{M}"
+superseded_reason: "Design Spec v{old} → v{new} 演进"
+superseded_date: "{date}"
 ---
 ```
 
@@ -95,13 +95,13 @@ superseded_date: "2026-04-03"
 
 **示例**:
 ```
-Epic-6（v3.3）下有 story-6-01 ~ story-6-14
+Epic-{N}（v{old}）下有 story-{N}-01 ~ story-{N}-{MM}
   ↓
-story-6-01 ~ story-6-10 已完成（COMPLETED）
+story-{N}-01 ~ story-{N}-{KK} 已完成（COMPLETED）
   ↓
 这些 Story 状态保持不变
   ↓
-Epic-6 的完成度 = 10/14（71.4%）
+Epic-{N} 的完成度 = {KK}/{MM}（{percentage}%）
 ```
 
 **为什么保留？**
@@ -117,17 +117,17 @@ Epic-6 的完成度 = 10/14（71.4%）
 
 ```bash
 # 查询当前版本
-ls docs/design/service_layer_architecture_v*.md
+ls {project_docs}/design/{layer}_design_v*.md
 
 # 输出示例：
-# docs/design/service_layer_architecture_v4.0.md（当前）
-# docs/design/archive/service_layer_architecture_v3.3.md（过期）
+# {project_docs}/design/{layer}_design_v{new}.md（当前）
+# {project_docs}/design/archive/{layer}_design_v{old}_YYYYMMDD.md（过期）
 ```
 
 **验证方法**:
 ```bash
 # 检查版本日期
-grep -E "version|更新日期" docs/design/service_layer_architecture_v*.md
+grep -E "version|更新日期" {project_docs}/design/{layer}_design_v*.md
 ```
 
 ---
@@ -136,65 +136,65 @@ grep -E "version|更新日期" docs/design/service_layer_architecture_v*.md
 
 **操作清单**:
 
-- ✅ 创建新 Epic（如 Epic-15，基于 v4.0）
-- ✅ 创建新 Story（如 story-15-01/02）
-- ✅ 标记旧 Story 为 CANCELLED（如 story-6-15）
+- ✅ 创建新 Epic（如 Epic-{M}，基于 v{new}）
+- ✅ 创建新 Story（如 story-{M}-01/02）
+- ✅ 标记旧 Story 为 CANCELLED（如 story-{N}-{KK}）
 
 **创建新 Epic**:
 ```bash
 # 使用模板
 cp .claude/skills/pm/templates/epic_template.md \
-   docs/scrum/prd/epic-15-data-layer-optimization-v4.md
+   {project_docs}/scrum/prd/epic-{M}-{description}.md
 
 # 编辑 Epic 文件，填写详细内容
-vim docs/scrum/prd/epic-15-data-layer-optimization-v4.md
+vim {project_docs}/scrum/prd/epic-{M}-{description}.md
 ```
 
 **创建新 Story**:
 ```bash
 # 使用模板
 cp .claude/skills/pm/templates/story_template.md \
-   docs/scrum/story/story-15-01-redundancy-analysis.md
+   {project_docs}/scrum/story/story-{M}-01-{description}.md
 
 # 编辑 Story 文件，填写详细内容
-vim docs/scrum/story/story-15-01-redundancy-analysis.md
+vim {project_docs}/scrum/story/story-{M}-01-{description}.md
 ```
 
 **标记旧 Story**:
 ```bash
 # 编辑旧 Story 文件
-vim docs/scrum/story/story-6-15-data-table-bloat.md
+vim {project_docs}/scrum/story/story-{N}-{KK}-{description}.md
 
 # 添加取消字段
 # cancel_reason: "被 v4.0 架构替代"
-# replaced_by: "STORY-15-01, STORY-15-02"
-# cancel_date: "2026-04-03"
-# design_spec_version: "v3.3 → v4.0"
+# replaced_by: "STORY-{M}-{MM1}, STORY-{M}-{MM2}"
+# cancel_date: "{cancel_date}"
+# design_spec_version: "v{old} → v{new}"
 ```
 
 ---
 
 #### Step 3: 更新 Epic 状态
 
-**旧 Epic 文件**（epic-6）:
+**旧 Epic 文件**（epic-{N}）:
 ```yaml
 ---
-id: "EPIC-6"
+id: "EPIC-{N}"
 status: "SUPERSEDED"  # 原状态可能是 IN_PROGRESS
-superseded_by: "EPIC-15"
-superseded_reason: "Design Spec v3.3 → v4.0 演进"
-superseded_date: "2026-04-03"
+superseded_by: "EPIC-{M}"
+superseded_reason: "Design Spec v{old} → v{new} 演进"
+superseded_date: "{date}"
 ---
 ```
 
-**新 Epic 文件**（epic-15）:
+**新 Epic 文件**（epic-{M}）:
 ```yaml
 ---
-id: "EPIC-15"
+id: "EPIC-{M}"
 status: "TODO"
-supersedes: "EPIC-6"
-supersedes_reason: "基于 v4.0 架构重新设计"
-created_date: "2026-04-03"
+supersedes: "EPIC-{N}"
+supersedes_reason: "基于 v{new} 架构重新设计"
+created_date: "{date}"
 ---
 ```
 
@@ -208,8 +208,8 @@ created_date: "2026-04-03"
 
 | Epic ID | Epic 标题 | 状态 | 完成度 | Story 进度 | 开始日期 | 目标日期 |
 |--------|---------|------|--------|-----------|----------|----------|
-| EPIC-6 | 数据层架构优化 v3.3 | **SUPERSEDED** | 71.4% | 10/14 | 2026-02-03 | - |
-| EPIC-15 | 数据层架构优化 v4.0 | TODO | 0% | 0/17 | 2026-04-16 | 2026-05-06 |
+| EPIC-{N} | {旧 Epic 标题} v{old} | **SUPERSEDED** | {X}% | {A}/{B} | {start_date} | - |
+| EPIC-{M} | {新 Epic 标题} v{new} | TODO | 0% | 0/{C} | {start_date} | {target_date} |
 ```
 
 **更新 KANBAN.md**:
@@ -218,7 +218,7 @@ created_date: "2026-04-03"
 
 | Story | Epic | 标题 | 取消原因 | 替换为 |
 |-------|------|------|---------|--------|
-| STORY-6-15 | EPIC-6 | 数据表膨胀问题调研 | v3.3 → v4.0 演进 | STORY-15-01, STORY-15-02 |
+| STORY-{N}-{KK} | EPIC-{N} | {Story 标题} | v{old} → v{new} 演进 | STORY-{M}-{MM1}, STORY-{M}-{MM2} |
 ```
 
 **同步命令**（手动或自动）:
@@ -237,14 +237,14 @@ grep -r "^status:" docs/scrum/prd/epic-*.md docs/scrum/story/*.md
 
 **❌ 错误做法**:
 ```
-用 story-6-15（v3.3）替换 story-15-01（v4.0）
+用 story-{N}-{KK}（v{old}）替换 story-{M}-{MM}（v{new}）
 ```
 
 **✅ 正确做法**:
 ```
-默认应用新版本（v4.0）
-story-6-15 标记为 CANCELLED
-story-15-01 正常执行
+默认应用新版本（v{new}）
+story-{N}-{KK} 标记为 CANCELLED
+story-{M}-{MM} 正常执行
 ```
 
 **为什么错误？**
@@ -258,19 +258,19 @@ story-15-01 正常执行
 
 **❌ 错误理解**:
 ```
-Epic-6 和 Epic-15 是重复的，需要去重
+Epic-{N} 和 Epic-{M} 是重复的，需要去重
 ```
 
 **✅ 正确理解**:
 ```
-这是 Design Spec 演进（v3.3 → v4.0）
+这是 Design Spec 演进（v{old} → v{new}）
 不是重复需求，而是架构升级
 ```
 
 **为什么错误？**
 - 混淆"演进"与"重复"
 - 演进是技术迭代，重复是管理失误
-- Epic-6 和 Epic-15 是不同版本的技术方案
+- Epic-{N} 和 Epic-{M} 是不同版本的技术方案
 
 ---
 
@@ -278,7 +278,7 @@ Epic-6 和 Epic-15 是重复的，需要去重
 
 **❌ 错误做法**:
 ```
-修改已完成 story-6-01 ~ story-6-10 的状态
+修改已完成 story-{N}-01 ~ story-{N}-{KK} 的状态
 ```
 
 **✅ 正确做法**:
@@ -295,77 +295,77 @@ Epic-6 和 Epic-15 是重复的，需要去重
 
 ## 实际案例
 
-### 案例 1: 服务层架构 v3.3 → v4.0 演进
+### 案例 1: 服务层架构 v{old} → v{new} 演进
 
 **背景**:
-- `docs/design/service_layer_architecture_v3.3.md` 存在
-- Epic-6 基于v3.3，包含 15 个 Story
-- 其中 story-6-01 ~ story-6-10 已完成，story-6-11 ~ story-6-15 未完成
+- `{project_docs}/design/{layer}_design_v{old}.md` 存在
+- Epic-{N} 基于 v{old}，包含 {total} 个 Story
+- 其中前 {completed} 个已完成，后 {remaining} 个未完成
 
 **演进事件**:
-- `docs/design/service_layer_architecture_v4.0.md` 发布
-- 新版本优化了数据层架构
+- `{project_docs}/design/{layer}_design_v{new}.md` 发布
+- 新版本优化了架构
 
 **处理流程**:
 
 1. **创建新 Epic**:
-   - Epic-15: 数据层架构优化 v4.0
-   - 17 个 Story（重新设计）
+   - Epic-{M}: {新 Epic 描述} v{new}
+   - {new_total} 个 Story（重新设计）
 
 2. **取消旧 Story**:
-   - story-6-15: 数据表膨胀问题调研 → CANCELLED
-   - `replaced_by: "STORY-15-01, STORY-15-02"`
+   - story-{N}-{KK}: {描述} → CANCELLED
+   - `replaced_by: "STORY-{M}-{MM1}, STORY-{M}-{MM2}"`
 
 3. **保留已完成 Story**:
-   - story-6-01 ~ story-6-10 状态不变（COMPLETED）
+   - story-{N}-01 ~ story-{N}-{completed} 状态不变（COMPLETED）
 
 4. **更新 Epic 状态**:
-   - Epic-6: IN_PROGRESS → SUPERSEDED
-   - Epic-15: TODO（新创建）
+   - Epic-{N}: IN_PROGRESS → SUPERSEDED
+   - Epic-{M}: TODO（新创建）
 
 5. **同步 DASHBOARD/KANBAN**:
-   - Epic-6 完成度 = 10/15（66.7%）
-   - Epic-15 完成度 = 0/17（0%）
+   - Epic-{N} 完成度 = {completed}/{total}（{percentage}%）
+   - Epic-{M} 完成度 = 0/{new_total}（0%）
 
 **结果**:
-- Epic-6 完成度固定在 66.7%（已完成工作保留）
-- Epic-15 从 0% 开始（全新架构）
+- Epic-{N} 完成度固定在 {percentage}%（已完成工作保留）
+- Epic-{M} 从 0% 开始（全新架构）
 - 可追溯性完整（明确记录替换关系）
 
 ---
 
-### 案例 2: 数据库 DDL v2.0 → v3.0 演进
+### 案例 2: 数据库 DDL v{old} → v{new} 演进
 
 **背景**:
-- `docs/design/database_ddl_v2.0.md` 存在
-- Epic-5 基于 v2.0，包含 8 个 Story
+- `{project_docs}/design/database_ddl_v{old}.md` 存在
+- Epic-{N} 基于 v{old}，包含 {total} 个 Story
 - 所有 Story 均已完成
 
 **演进事件**:
-- `docs/design/database_ddl_v3.0.md` 发布
-- 新版本添加了 TrainJob 支持
+- `{project_docs}/design/database_ddl_v{new}.md` 发布
+- 新版本添加了新功能支持
 
 **处理流程**:
 
 1. **创建新 Epic**:
-   - Epic-12: TrainJob 支持与 Kubeflow 集成
-   - 10 个 Story（新功能）
+   - Epic-{M}: {新功能描述}
+   - {new_total} 个 Story（新功能）
 
 2. **保留旧 Epic**:
-   - Epic-5 状态不变（COMPLETED）
+   - Epic-{N} 状态不变（COMPLETED）
    - 所有 Story 保持 COMPLETED
 
 3. **更新 Epic 状态**:
-   - Epic-5: COMPLETED（不变）
-   - Epic-12: TODO（新创建）
+   - Epic-{N}: COMPLETED（不变）
+   - Epic-{M}: TODO（新创建）
 
 4. **同步 DASHBOARD/KANBAN**:
-   - Epic-5 完成度 = 8/8（100%）
-   - Epic-12 完成度 = 0/10（0%）
+   - Epic-{N} 完成度 = {total}/{total}（100%）
+   - Epic-{M} 完成度 = 0/{new_total}（0%）
 
 **结果**:
-- Epic-5 完成度固定在 100%（历史工作保留）
-- Epic-12 从 0% 开始（新功能开发）
+- Epic-{N} 完成度固定在 100%（历史工作保留）
+- Epic-{M} 从 0% 开始（新功能开发）
 - 两个 Epic 并存（不是重复，而是演进）
 
 ---
@@ -396,9 +396,9 @@ grep -E "版本|version" docs/design/*.md
 - [ ] 否（检查是否为重复创建）
 
 **问题 2**: 新版本与旧版本的关系？
-- [ ] 升级（如 v3.3 → v4.0）
-- [ ] 重构（如 v2.0 → v3.0）
-- [ ] 新功能（如添加 TrainJob 支持）
+- [ ] 升级（如 v{old} → v{new}）
+- [ ] 重构（如 v{old} → v{new}）
+- [ ] 新功能（如添加 {feature} 支持）
 
 **问题 3**: 是否需要取消旧 Story？
 - [ ] 是（未完成 Story 标记 CANCELLED）
@@ -510,8 +510,8 @@ vim docs/scrum/KANBAN.md
    - 所有设计来源于 `docs/design/`
 
 2. **新版本默认应用**
-   - v4.0 发布 → Epic-15 默认应用
-   - v3.3 未完成 Story 默认取消
+   - v{new} 发布 → Epic-{M} 默认应用
+   - v{old} 未完成 Story 默认取消
 
 3. **已完成工作保留**
    - 已完成 Story 状态不变

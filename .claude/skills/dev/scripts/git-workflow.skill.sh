@@ -247,33 +247,8 @@ git-workflow.feature.submit() {
   else
     echo ""
     warning "glab CLI 未安装，无法自动创建 MR"
-
-    # 动态构建 MR 创建 URL（从 git remote 自动检测）
-    local remote_url host path mr_new_url
-    remote_url=$(git remote get-url origin 2>/dev/null)
-    if [[ "$remote_url" =~ ^git@([^:]+):(.*)\.git$ ]]; then
-      host="${BASH_REMATCH[1]}"
-      path="${BASH_REMATCH[2]}"
-    elif [[ "$remote_url" =~ ^https?://([^/]+)/(.*)\.git$ ]]; then
-      host="${BASH_REMATCH[1]}"
-      path="${BASH_REMATCH[2]}"
-    elif [[ "$remote_url" =~ ^https?://([^/]+)/(.*)$ ]]; then
-      host="${BASH_REMATCH[1]}"
-      path="${BASH_REMATCH[2]}"
-    fi
-
-    if [ -n "$host" ] && [ -n "$path" ]; then
-      # 根据平台类型生成不同的 MR/PR URL
-      if [[ "$host" =~ github ]]; then
-        mr_new_url="https://$host/$path/compare/master...$CURRENT_BRANCH"
-      else
-        mr_new_url="https://$host/$path/-/merge_requests/new"
-      fi
-      echo "请手动创建 MR/PR:"
-      echo "  $mr_new_url"
-    else
-      echo "请手动在 Git Host Web UI 创建 MR"
-    fi
+    echo "请手动在 GitLab Web UI 创建 MR:"
+    echo "  https://git.example.com/user/{PROJECT_NAME}/-/merge_requests/new"
   fi
 }
 

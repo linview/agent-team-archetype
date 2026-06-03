@@ -16,7 +16,7 @@
 **项目**: [项目名称]
 **Sprint 周期**: [起始日期] 至 [结束日期]（[X] 周，[Y] 工作日）
 **Sprint 目标**: **[Sprint 核心目标]**
-**负责人**: [负责人@example.com]
+**负责人**: [负责人@{company_domain}]
 
 ---
 
@@ -190,5 +190,5 @@ Sprint 成功的验收标准：
 
 **创建日期**: YYYY-MM-DD
 **最后更新**: YYYY-MM-DD
-**维护者**: [负责人@example.com]
+**维护者**: [负责人@{company_domain}]
 **状态**: PLANNED

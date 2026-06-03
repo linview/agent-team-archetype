@@ -17,7 +17,7 @@
 **最后更新**: [YYYY-MM-DD]
 **Sprint 状态**: [状态描述]
 **Sprint 目标**: [Sprint 目标描述]
-**负责人**: [负责人@example.com]
+**负责人**: [负责人@{company_domain}]
 
 ---
 
@@ -169,6 +169,6 @@
 ---
 
 **报告生成日期**: [YYYY-MM-DD]
-**Scrum Master**: [scrum-master@example.com]
+**Scrum Master**: [scrum-master@{company_domain}]
 **数据源**: docs/scrum/prd/epic-*.md, docs/scrum/story/story-*.md
 **⚠️ 说明**: [特殊说明或备注]

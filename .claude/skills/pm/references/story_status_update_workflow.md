@@ -4,6 +4,8 @@
 
 **相关章节**: SKILL.md "Story 状态更新流程"（核心原则）
 
+**前置知识**: 状态流转规则和转换矩阵见 [story_status_fsm.md](story_status_fsm.md)
+
 **使用说明**: 本文档提供详细的 5-Step 操作流程和命令示例，核心原则请参考 SKILL.md 主文件。
 
 ---
@@ -36,9 +38,9 @@ Git Commit Evidence → Code Verification → Production Verification → Story 
 git log --since="30 days ago" --pretty=format:"%h|%ad|%s" --date=short
 
 # 输出示例：
-# 766b27e|2026-03-01|[feat] 元数据提取重构 - 并发竞态修复 + SIT 测试完善
-# 814c38b|2026-02-28|[feat] 冗余数据分析和紧急清理
-# abc1234|2026-02-25|[fix] {BUSINESS_SHORT}计算时区问题修复
+# {commit_hash}|2026-03-01|[feat] 功能描述 - 关键修改摘要
+# {commit_hash}|2026-02-28|[fix] 缺陷修复描述
+# {commit_hash}|2026-02-25|[refactor] 重构描述
 ```
 
 **关键指标**:
@@ -54,14 +56,14 @@ git log --since="30 days ago" --pretty=format:"%h|%ad|%s" --date=short
 # 方法 1: 按关键词搜索 Commit Message
 git log --all --grep="metadata" --since="30 days ago"
 git log --all --grep="timezone" --since="30 days ago"
-git log --all --grep="STORY-6-09" --since="30 days ago"
+git log --all --grep="STORY-{EPIC}-{SEQ}" --since="30 days ago"
 
 # 方法 2: 按文件名搜索
-git log --since="30 days ago" -- internal/pkg/k8s/extractor/metadata.go
-git log --since="30 days ago" -- internal/pkg/calculator/gpu_calculator.go
+git log --since="30 days ago" -- {source_file_path_1}
+git log --since="30 days ago" -- {source_file_path_2}
 
 # 方法 3: 按作者搜索
-git log --author="example-user@example.com" --since="7 days ago"
+git log --author="{developer_email}" --since="7 days ago"
 ```
 
 **预期输出**: 找到相关的 Commit 记录
@@ -72,21 +74,20 @@ git log --author="example-user@example.com" --since="7 days ago"
 
 ```bash
 # 查看文件列表（简短格式）
-git show 766b27e --stat
+git show {commit_hash} --stat
 
 # 输出示例：
 #  86 files changed, 1234 insertions(+), 567 deletions(-)
-#  internal/pkg/k8s/extractor/metadata.go          |  45 +++++---
-#  internal/pkg/k8s/extractor/source_identifier.go |  89 ++++++++++++
+#  {source_file_1}          |  45 +++++---
+#  {source_file_2} |  89 ++++++++++++
 #  ...
 
 # 查看文件列表（仅文件名）
-git show 766b27e --name-only
+git show {commit_hash} --name-only
 
 # 输出示例：
-#  internal/pkg/k8s/extractor/metadata.go
-#  internal/pkg/k8s/extractor/source_identifier.go
-#  internal/pkg/k8s/extractor/gpu_extractor.go
+#  {source_file_1}
+#  {source_file_2}
 #  ...
 ```
 
@@ -113,13 +114,13 @@ git show 766b27e --name-only
 
 ```bash
 # 查看完整 diff
-git show 766b27e
+git show {commit_hash}
 
 # 查看单个文件的 diff
-git show 766b27e -- internal/pkg/k8s/extractor/source_identifier.go
+git show {commit_hash} -- {source_file_path}
 
 # 查看特定行范围的修改
-git show 766b27e -L 50,100:internal/pkg/k8s/extractor/source_identifier.go
+git show {commit_hash} -L {start_line},{end_line}:{source_file_path}
 ```
 
 **验证点**:
@@ -133,13 +134,13 @@ git show 766b27e -L 50,100:internal/pkg/k8s/extractor/source_identifier.go
 
 ```bash
 # 验证文件在 Commit 中的变化
-git diff 766b27e^..766b27e -- internal/pkg/k8s/extractor/source_identifier.go
+git diff {commit_hash}^..{commit_hash} -- {source_file_path}
 
 # 对比当前工作目录与 Commit
-git diff 766b27e -- internal/pkg/k8s/extractor/source_identifier.go
+git diff {commit_hash} -- {source_file_path}
 
 # 检查文件是否存在
-git ls-tree -r 766b27e --name-only | grep source_identifier.go
+git ls-tree -r {commit_hash} --name-only | grep {file_name}
 ```
 
 **验证点**:
@@ -151,17 +152,17 @@ git ls-tree -r 766b27e --name-only | grep source_identifier.go
 #### 命令 3: 检查测试是否通过
 
 ```bash
-# 运行所有单元测试
-go test ./internal/... -v
+# 运行所有单元测试（使用项目对应的测试命令）
+{test_command}
 
-# 运行特定包的测试
-go test ./internal/pkg/k8s/extractor -v
+# 运行特定模块的测试
+{test_command} {module_path} -v
 
 # 运行特定测试函数
-go test ./internal/pkg/calculator -v -run TestGPUUsageCalculation
+{test_command} {module_path} -v -run {TestFunctionName}
 
 # 检查测试覆盖率
-go test ./internal/... -cover
+{coverage_command}
 ```
 
 **验证标准**:
@@ -202,13 +203,13 @@ go test ./internal/... -cover
 
 ```bash
 # PostgreSQL
-PGPASSWORD="password" psql -h 127.0.0.10 -p 32432 -U postgres -d event_db
+PGASSWORD="{password}" psql -h {db_host} -p {db_port} -U {db_user} -d {db_name}
 
 # MySQL
-mysql -h 127.0.0.10 -P 3306 -u root -p event_db
+mysql -h {db_host} -P {db_port} -u {db_user} -p {db_name}
 
 # MongoDB
-mongo --host 127.0.0.10 --port 27017 -u admin -p event_db
+mongo --host {db_host} --port {db_port} -u {db_user} -p {db_name}
 ```
 
 ---
@@ -219,15 +220,15 @@ mongo --host 127.0.0.10 --port 27017 -u admin -p event_db
 -- 查询总记录数、唯一记录数、重复记录数、重复率
 SELECT
   COUNT(*) as total_records,
-  COUNT(DISTINCT k8s_pod_uid) as unique_pods,
-  COUNT(*) - COUNT(DISTINCT k8s_pod_uid) as duplicates,
-  ROUND((COUNT(*) - COUNT(DISTINCT k8s_pod_uid)) * 100.0 / COUNT(*), 2) as duplicate_rate
-FROM pod_resource_status;
+  COUNT(DISTINCT {unique_key_column}) as unique_records,
+  COUNT(*) - COUNT(DISTINCT {unique_key_column}) as duplicates,
+  ROUND((COUNT(*) - COUNT(DISTINCT {unique_key_column})) * 100.0 / COUNT(*), 2) as duplicate_rate
+FROM {table_name};
 
 -- 输出示例：
---  total_records | unique_pods | duplicates | duplicate_rate
--- --------------+-------------+------------+---------------
---       1114303 |      875544 |     238759 |         21.43
+--  total_records | unique_records | duplicates | duplicate_rate
+-- --------------+----------------+------------+---------------
+--       1114303 |         875544 |     238759 |         21.43
 ```
 
 ---
@@ -242,12 +243,12 @@ SELECT
   pg_size_pretty(pg_relation_size(schemaname||'.'||tablename)) AS data_size,
   pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename) - pg_relation_size(schemaname||'.'||tablename)) AS index_size
 FROM pg_tables
-WHERE tablename = 'pod_resource_status';
+WHERE tablename = '{table_name}';
 
 -- 输出示例：
 --   tablename       | total_size | data_size | index_size
 -- ------------------+------------+-----------+------------
---  pod_resource_status | 8.2 GB      | 6.5 GB    | 1.7 GB
+--  {table_name}     | 8.2 GB     | 6.5 GB    | 1.7 GB
 ```
 
 ---
@@ -258,16 +259,16 @@ WHERE tablename = 'pod_resource_status';
 -- 查询关键字段的空值率
 SELECT
   COUNT(*) as total_records,
-  COUNT(*) FILTER (WHERE user_id IS NULL OR user_id = '0') as missing_user_id,
-  COUNT(*) FILTER (WHERE team_id IS NULL OR team_id = '0') as missing_team_id,
-  COUNT(*) FILTER (WHERE gpu_count IS NULL OR gpu_count = 0) as missing_gpu_count,
-  ROUND(COUNT(*) FILTER (WHERE user_id IS NULL OR user_id = '0') * 100.0 / COUNT(*), 2) as user_id_missing_rate
-FROM pod_resource_status;
+  COUNT(*) FILTER (WHERE {field_1} IS NULL OR {field_1} = '0') as missing_{field_1},
+  COUNT(*) FILTER (WHERE {field_2} IS NULL OR {field_2} = '0') as missing_{field_2},
+  COUNT(*) FILTER (WHERE {field_3} IS NULL OR {field_3} = 0) as missing_{field_3},
+  ROUND(COUNT(*) FILTER (WHERE {field_1} IS NULL OR {field_1} = '0') * 100.0 / COUNT(*), 2) as {field_1}_missing_rate
+FROM {table_name};
 
 -- 输出示例：
---  total_records | missing_user_id | missing_team_id | missing_gpu_count | user_id_missing_rate
--- --------------+-----------------+-----------------+------------------+----------------------
---       1114303 |          423456 |          389021 |           123456 |                38.00
+--  total_records | missing_{field_1} | missing_{field_2} | missing_{field_3} | {field_1}_missing_rate
+-- --------------+-------------------+-------------------+-------------------+-----------------------
+--       1114303 |            423456 |            389021 |            123456 |                 38.00
 ```
 
 ---
@@ -287,12 +288,12 @@ FROM pod_resource_status;
 
 **❌ 错误做法**:
 ```
-凭空认为"生产环境有 63.6 万条重复记录"（基于 Research 文档）
+凭空认为"生产环境有 X 条重复记录"（基于过时的分析文档）
 ```
 
 **✅ 正确做法**:
 ```
-连接生产环境数据库，查询实际数据（238,759 条，重复率 21.43%）
+连接生产环境数据库，查询实际数据（真实条数，重复率 Y%）
 ```
 
 **后果**:
@@ -334,13 +335,13 @@ Git Commit Evidence → Code Verification → Production Verification (if applic
 
 ```bash
 # 查找所有 TODO 状态的 Story
-grep -l 'status: "TODO"' docs/scrum/story/story-6-*.md
+grep -l 'status: "TODO"' {project_docs}/scrum/story/story-{epic_seq}-*.md
 
 # 查找特定 Epic 下的 TODO Story
-grep -l 'status: "TODO"' docs/scrum/story/story-8-*.md
+grep -l 'status: "TODO"' {project_docs}/scrum/story/story-{epic_seq}-*.md
 
 # 查找所有 IN_PROGRESS 状态的 Story
-grep -l 'status: "IN_PROGRESS"' docs/scrum/story/*.md
+grep -l 'status: "IN_PROGRESS"' {project_docs}/scrum/story/*.md
 ```
 
 ---
@@ -348,20 +349,20 @@ grep -l 'status: "IN_PROGRESS"' docs/scrum/story/*.md
 **批量更新状态（基于证据）**:
 
 ```bash
-# 批量更新 TODO → COMPLETED
-for file in docs/scrum/story/story-6-{09,10,11,12,13}-*.md; do
+# 批量更新 TODO → COMPLETED（示例：Epic N 的 Story 09-13）
+for file in {project_docs}/scrum/story/story-{epic_seq}-{09,10,11,12,13}-*.md; do
   # 更新状态
   sed -i 's/^status: "TODO"/status: "COMPLETED"/' "$file"
-  
+
   # 删除旧的 completed_date（如果存在）
   sed -i '/^completed_date:/d' "$file"
-  
+
   # 在 front matter 的 --- 后添加 completed_date
   sed -i "/^---/a completed_date: \"$(date +%Y-%m-%d)\"" "$file"
 done
 
-# 批量更新 IN_PROGRESS → COMPLETED
-for file in docs/scrum/story/story-12-{01,02,03,04}-*.md; do
+# 批量更新 IN_PROGRESS → COMPLETED（示例：Epic M 的 Story 01-04）
+for file in {project_docs}/scrum/story/story-{epic_seq2}-{01,02,03,04}-*.md; do
   sed -i 's/^status: "IN_PROGRESS"/status: "COMPLETED"/' "$file"
   sed -i '/^completed_date:/d' "$file"
   sed -i "/^---/a completed_date: \"$(date +%Y-%m-%d)\"" "$file"
@@ -413,11 +414,10 @@ sed -i "0,/^---/s/^---/---\ncompleted_date: \"$(date +%Y-%m-%d)\"/" "$STORY_FILE
 
 ```bash
 # 统计所有 COMPLETED Story
-grep -c 'status: "COMPLETED"' docs/scrum/story/*.md
+grep -c 'status: "COMPLETED"' {project_docs}/scrum/story/*.md
 
 # 统计特定 Epic 的 COMPLETED Story
-grep -c 'status: "COMPLETED"' docs/scrum/story/story-6-*.md
-grep -c 'status: "COMPLETED"' docs/scrum/story/story-8-*.md
+grep -c 'status: "COMPLETED"' {project_docs}/scrum/story/story-{epic_seq}-*.md
 
 # 统计所有状态的 Story 分布
 grep -h "^status:" docs/scrum/story/*.md | sort | uniq -c | sort -rn
@@ -435,47 +435,47 @@ grep -h "^status:" docs/scrum/story/*.md | sort | uniq -c | sort -rn
 
 ```bash
 # 查找 Epic 完成度
-grep -A 5 "EPIC-6" docs/scrum/DASHBOARD.md | grep "完成度"
+grep -A 5 "EPIC-{N}" {project_docs}/scrum/DASHBOARD.md | grep "完成度"
 
 # 查找 Story 状态统计
-grep -A 10 "Story 状态统计" docs/scrum/DASHBOARD.md
+grep -A 10 "Story 状态统计" {project_docs}/scrum/DASHBOARD.md
 ```
 
 **手动同步流程**:
 
 ```bash
 # 1. 扫描源文件，生成统计
-grep -h "^status:" docs/scrum/prd/epic-*.md docs/scrum/story/*.md | \
+grep -h "^status:" {project_docs}/scrum/prd/epic-*.md {project_docs}/scrum/story/*.md | \
   sort | uniq -c | sort -rn
 
 # 2. 编辑 DASHBOARD.md
-vim docs/scrum/DASHBOARD.md
+vim {project_docs}/scrum/DASHBOARD.md
 
 # 3. 编辑 KANBAN.md
-vim docs/scrum/KANBAN.md
+vim {project_docs}/scrum/KANBAN.md
 
 # 4. 验证同步结果
-git diff docs/scrum/DASHBOARD.md docs/scrum/KANBAN.md
+git diff {project_docs}/scrum/DASHBOARD.md {project_docs}/scrum/KANBAN.md
 ```
 
 ---
 
 ## 工作流程示例
 
-### 场景 1: 验证 STORY-6-09 是否完成（代码相关）
+### 场景 1: 验证 Story 是否完成（代码相关）
 
-**背景**: 需要验证 STORY-6-09（元数据提取重构）是否完成
+**背景**: 需要验证 STORY-{N}-{MM}（功能描述）是否完成
 
 ---
 
 #### Step 1: Git Log 查找证据
 
 ```bash
-# 查找 STORY-6-09 相关的 Commit
-git log --all --grep="STORY-6-09" --since="30 days ago"
+# 查找 Story 相关的 Commit
+git log --all --grep="STORY-{N}-{MM}" --since="30 days ago"
 
 # 输出：
-# 766b27e [feat] 元数据提取重构 - 并发竞态修复 + SIT 测试完善
+# {commit_hash} [feat] 功能描述 - 修改摘要
 ```
 
 ---
@@ -484,18 +484,15 @@ git log --all --grep="STORY-6-09" --since="30 days ago"
 
 ```bash
 # 查看 Commit 修改的文件
-git show 766b27e --stat
+git show {commit_hash} --stat
 
 # 输出：
 #  86 files changed, 1234 insertions(+), 567 deletions(-)
-#  internal/pkg/k8s/extractor/metadata.go
-#  internal/pkg/kk8s/extractor/source_identifier.go
+#  {source_file_1}
+#  {source_file_2}
 
 # 验证关键函数是否存在
-git show 766b27e:internal/pkg/k8s/extractor/source_identifier.go | grep "func IdentifyPodSource"
-
-# 输出：
-# func IdentifyPodSource(pod *corev1.Pod) PodSourceType {
+git show {commit_hash}:{source_file_path} | grep "func {FunctionName}"
 ```
 
 **验证结果**: ✅ 代码真实存在且实现完整
@@ -504,17 +501,17 @@ git show 766b27e:internal/pkg/k8s/extractor/source_identifier.go | grep "func Id
 
 #### Step 3: 生产环境验证（不适用）
 
-**原因**: STORY-6-09 是代码重构，不涉及数据库优化或生产环境评估
+**原因**: 此 Story 是代码重构，不涉及数据库优化或生产环境评估
 
 ---
 
 #### Step 4: 更新 Story 状态
 
 ```bash
-# 更新 STORY-6-09 状态为 COMPLETED
-sed -i 's/^status: "IN_PROGRESS"/status: "COMPLETED"/' docs/scrum/story/story-6-09-*.md
-sed -i '/^completed_date:/d' docs/scrum/story/story-6-09-*.md
-sed -i "0,/^---/s/^---/---\ncompleted_date: \"$(date +%Y-%m-%d)\"/" docs/scrum/story/story-6-09-*.md
+# 更新 Story 状态为 COMPLETED
+sed -i 's/^status: "IN_PROGRESS"/status: "COMPLETED"/' {project_docs}/scrum/story/story-{N}-{MM}-*.md
+sed -i '/^completed_date:/d' {project_docs}/scrum/story/story-{N}-{MM}-*.md
+sed -i "0,/^---/s/^---/---\ncompleted_date: \"$(date +%Y-%m-%d)\"/" {project_docs}/scrum/story/story-{N}-{MM}-*.md
 ```
 
 ---
@@ -523,29 +520,29 @@ sed -i "0,/^---/s/^---/---\ncompleted_date: \"$(date +%Y-%m-%d)\"/" docs/scrum/s
 
 ```bash
 # 统计验证
-grep -c 'status: "COMPLETED"' docs/scrum/story/story-6-*.md
+grep -c 'status: "COMPLETED"' {project_docs}/scrum/story/story-{N}-*.md
 
 # 手动更新 DASHBOARD.md 和 KANBAN.md
-vim docs/scrum/DASHBOARD.md
-vim docs/scrum/KANBAN.md
+vim {project_docs}/scrum/DASHBOARD.md
+vim {project_docs}/scrum/KANBAN.md
 ```
 
 ---
 
 ### 场景 2: 分析生产环境数据优化（数据库相关）⚠️ **包含生产环境验证**
 
-**背景**: 需要分析生产环境数据重复率，生成优化建议
+**背景**: 需要分析生产环境数据质量，生成优化建议
 
 ---
 
 #### Step 1: Git Log 查找证据
 
 ```bash
-# 查找 STORY-15-01 相关的 Commit
-git log --all --grep="STORY-15-01" --since="30 days ago"
+# 查找 Story 相关的 Commit
+git log --all --grep="STORY-{N}-{MM}" --since="30 days ago"
 
 # 输出：
-# 814c38b [feat] 冗余数据分析和紧急清理
+# {commit_hash} [feat] 数据分析和清理
 ```
 
 ---
@@ -554,12 +551,12 @@ git log --all --grep="STORY-15-01" --since="30 days ago"
 
 ```bash
 # 查看 Commit 修改的文件
-git show 814c38b --stat
+git show {commit_hash} --stat
 
 # 输出：
 #  12 files changed, 345 insertions(+), 67 deletions(-)
-#  db/scripts/analyze_duplicates.sql
-#  db/scripts/cleanup_duplicates.sql
+#  {sql_script_1}
+#  {sql_script_2}
 ```
 
 ---
@@ -568,20 +565,15 @@ git show 814c38b --stat
 
 ```bash
 # 连接生产环境数据库
-PGPASSWORD="post@1234.com" psql -h 127.0.0.10 -p 32432 -U postgres -d event_db
+PGPASSWORD="{password}" psql -h {db_host} -p {db_port} -U {db_user} -d {db_name}
 
-# 查询实际重复率
+# 查询实际数据质量指标（根据业务需要编写 SQL）
 SELECT
   COUNT(*) as total_records,
-  COUNT(DISTINCT k8s_pod_uid) as unique_pods,
-  COUNT(*) - COUNT(DISTINCT k8s_pod_uid) as duplicates,
-  ROUND((COUNT(*) - COUNT(DISTINCT k8s_pod_uid)) * 100.0 / COUNT(*), 2) as duplicate_rate
-FROM pod_resource_status;
-
-# 输出：
-#  total_records | unique_pods | duplicates | duplicate_rate
-# --------------+-------------+------------+---------------
-#       1114303 |      875544 |     238759 |         21.43
+  COUNT(DISTINCT {unique_key}) as unique_count,
+  COUNT(*) - COUNT(DISTINCT {unique_key}) as duplicates,
+  ROUND((COUNT(*) - COUNT(DISTINCT {unique_key})) * 100.0 / COUNT(*), 2) as duplicate_rate
+FROM {target_table};
 ```
 
 **⚠️ 不凭空推测，基于实际数据生成结论**
@@ -592,7 +584,7 @@ FROM pod_resource_status;
 
 ```bash
 # 如果验证通过，更新为 COMPLETED
-sed -i 's/^status: "TODO"/status: "COMPLETED"/' docs/scrum/story/story-15-01-*.md
+sed -i 's/^status: "TODO"/status: "COMPLETED"/' {project_docs}/scrum/story/story-{N}-{MM}-*.md
 ```
 
 ---
@@ -601,8 +593,8 @@ sed -i 's/^status: "TODO"/status: "COMPLETED"/' docs/scrum/story/story-15-01-*.m
 
 ```bash
 # 手动更新
-vim docs/scrum/DASHBOARD.md
-vim docs/scrum/KANBAN.md
+vim {project_docs}/scrum/DASHBOARD.md
+vim {project_docs}/scrum/KANBAN.md
 ```
 
 ---
@@ -659,7 +651,7 @@ vim docs/scrum/KANBAN.md
 **❌ 错误做法**:
 - P0/P1 优先级不与用户确认
 - 不理解业务价值就设置优先级
-- 例：Node Informer 设置为 P2（应该是 P0）
+- 例：核心基础设施组件被设置为 P2（应该是 P0）
 
 **✅ 正确做法**:
 - P0/P1 必须与用户确认

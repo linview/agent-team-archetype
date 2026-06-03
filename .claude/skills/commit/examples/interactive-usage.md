@@ -37,7 +37,7 @@ code_committer_mr_create
 # ℹ️  准备创建 MR，确认？
 #    Y
 # ✅ MR 创建成功: !123
-#    https://<git-host>/.../-/merge_requests/123
+#    https://git.example.com/.../-/merge_requests/123
 ```
 
 ## 示例 3: 一键提交+推送+创建 MR
@@ -58,5 +58,5 @@ code_committer_push_and_mr --auto-generate \
 # ✅ 推送成功: origin/feature/login
 # ℹ️  步骤 2/2: 创建 MR
 # ✅ MR 创建成功: !124
-#    https://<git-host>/.../-/merge_requests/124
+#    https://git.example.com/.../-/merge_requests/124
 ```

@@ -82,10 +82,8 @@ GITLAB_PAT=glpat-xxxxxxxxxxxxx
 # 飞书认证密钥
 FEISHU_AUTH_KEY=cli_xxxxxxxxxxxxxx
 
-# Git Host 实例地址（可选，默认从 git remote 自动检测）
-# 支持 GitLab、GitHub、Gitea 等平台
-# GITLAB_URL=https://gitlab.example.com
-# GITHUB_TOKEN=ghp_xxxxxxxxxxxxx
+# GitLab 实例地址（可选，默认从环境变量读取）
+GITLAB_URL=https://git.example.com
 
 # 飞书项目 ID（可选，用于工作项验证）
 FEISHU_PROJECT_ID=xxxxxxxxxxxxx
@@ -474,7 +472,7 @@ Commit 工作需要与其他角色密切协作。本 SKILL 专注于代码提交
 ## 参考
 
 - [设计文档](/docs/design/skills/commit-v1.0.0.md)
-- [飞书文档：GitLab MR - 飞书工作项关联功能使用指南](https://feishu.example.com/wiki/StSfwrGDoibiIOklf8ccOFumnHd)
+- [飞书文档：GitLab MR - 飞书工作项关联功能使用指南](https://example.feishu.cn/wiki/DOCUMENT_ID)
 - [Conventional Commits](https://www.conventionalcommits.org/)
 - [GitLab API Documentation: Merge Requests](https://docs.gitlab.com/ee/api/merge_requests.html)
 - [GitLab API Documentation: Users](https://docs.gitlab.com/ee/api/users.html)

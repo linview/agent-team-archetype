@@ -154,19 +154,19 @@ curl $RESOURCE_METER_API_URL/healthz
 # 在项目根目录创建 .env.skill
 cat > .env.skill << 'EOF'
 # Sentinel 配置 - 测试环境
-export TEST_API_URL="http://127.0.0.10:30882/api/v1"
-export TEST_DB_HOST="127.0.0.10"
-export TEST_DB_PORT="32432"
-export TEST_DB_NAME="event_db"
+export TEST_API_URL="http://127.0.0.1:30082/api/v1"
+export TEST_DB_HOST="127.0.0.1"
+export TEST_DB_PORT="32032"
+export TEST_DB_NAME="app_db"
 export TEST_DB_USER="postgres"
 export TEST_DB_PASSWORD="your-password"
 export TEST_KUBECONFIG="/path/to/kubeconfig"
 
 # Sentinel 配置 - 生产环境
-export PROD_API_URL="http://127.0.0.1:31676/api/v1"
-export PROD_DB_HOST="127.0.0.10"
-export PROD_DB_PORT="32432"
-export PROD_DB_NAME="event_db"
+export PROD_API_URL="http://127.0.0.1:31076/api/v1"
+export PROD_DB_HOST="127.0.0.1"
+export PROD_DB_PORT="32032"
+export PROD_DB_NAME="app_db"
 export PROD_DB_USER="postgres"
 export PROD_DB_PASSWORD="your-password"
 export PROD_KUBECONFIG="/path/to/kubeconfig"
@@ -208,7 +208,7 @@ KUBECONFIG="/custom/path/kubeconfig" ./.claude/skills/sentinel/scripts/inspect s
 
 ## 架构说明
 
-Resource Meter 采用**服务和数据库分离部署**架构：
+Service Monitor 采用**服务和数据库分离部署**架构：
 - **服务部署**：在 prod K8s 集群，通过 NodePort Service 暴露
 - **数据库部署**：在 test K8s 集群，测试环境和生产环境共享同一个数据库实例
 

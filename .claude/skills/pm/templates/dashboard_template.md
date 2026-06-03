@@ -71,7 +71,7 @@
 
 **Sprint 周期**: [起始日期] - [结束日期]
 **Sprint 状态**: [状态]
-**负责人**: [负责人@example.com]
+**负责人**: [负责人@{company_domain}]
 
 **Sprint 目标**:
 - [ ] [目标 1]

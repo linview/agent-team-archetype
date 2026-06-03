@@ -16,7 +16,7 @@
 **项目**: [项目名称]
 **Sprint 周期**: [起始日期] 至 [结束日期]（实际 [X] 天，原计划 [Y] 天）
 **Sprint 目标**: **[Sprint 核心目标]**
-**负责人**: [负责人@example.com]
+**负责人**: [负责人@{company_domain}]
 **回顾日期**: [回顾日期]
 
 ---
@@ -273,5 +273,5 @@ Sprint {N} **[完成状态]**，[核心成果总结]。本 Sprint [核心成果�
 
 **创建日期**: YYYY-MM-DD
 **最后更新**: YYYY-MM-DD
-**维护者**: [负责人@example.com]
+**维护者**: [负责人@{company_domain}]
 **状态**: COMPLETED

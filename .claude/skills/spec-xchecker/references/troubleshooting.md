@@ -59,7 +59,7 @@ pip install -r requirements.txt
 
 ## 获取帮助
 
-**反馈渠道**：chenhuazhong@example.com
+**反馈渠道**：maintainer@example.com
 
 **相关文档**：
 - [usage_guide.md](usage_guide.md) - 详细使用指南

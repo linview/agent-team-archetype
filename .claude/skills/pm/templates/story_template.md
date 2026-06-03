@@ -19,7 +19,7 @@ description: "Story 简要描述"
 status: "TODO"
 priority: "P1"
 story_points: 3
-assignee: "developer@example.com"
+assignee: "developer@{company_domain}"
 start_date: "2026-XX-XX"
 target_date: "2026-XX-XX"
 completed_date: ""
@@ -51,13 +51,23 @@ updated_at: "2026-XX-XX"
 - [ ] 标准 3
 
 ### 测试标准（按实现阶段）
-- [ ] **[UT]** 覆盖率 >= 75%，通过率 100%
-<!-- 根据功能类型和实现阶段选择以下标签：
+
+> **必填**：每个 Story 必须根据功能类型补充对应的测试 AC。
+> 根据功能类型查矩阵确定必须的测试层级：[AC 测试分层策略](../references/ac_testing_strategy.md)
+>
+> | 功能类型 | [UT] | [API] | [SIT] | [E2E] | [UAT] |
+> |---------|------|-------|-------|-------|-------|
+> | 基础设施 | 必须 | - | 可选 | - | - |
+> | 服务层 | 必须 | - | 可选 | - | - |
+> | API 端点 | 必须 | 必须 | 必须 | - | - |
+> | 前端页面 | 可选 | - | 必须 | 必须 | 必须 |
+
+- [ ] **[UT]** （必填：Service/Logic 层覆盖率 >= 75%，通过率 100%）
+<!-- 根据功能类型取消注释以下标签：
 - [ ] **[API]** Handler 测试覆盖正常/异常/边界路径
 - [ ] **[SIT]** 集成环境下跨模块交互验证
 - [ ] **[E2E]** 前后端联调验证
 - [ ] **[UAT]** 用户场景验收
-详见: .claude/skills/pm/references/ac_testing_strategy.md
 -->
 
 ## 实施计划
@@ -102,5 +112,5 @@ updated_at: "2026-XX-XX"
 ---
 
 **创建日期**: 2026-XX-XX
-**维护者**: developer@example.com
+**维护者**: developer@{company_domain}
 **相关 Epic**: EPIC-{序号}

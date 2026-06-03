@@ -18,7 +18,7 @@ description: "Epic 简短描述（1-2 句话）"
 status: "TODO"  # TODO/IN_PROGRESS/COMPLETED/BLOCKED/CANCELLED
 priority: "P1"  # P0/P1/P2/P3
 layer: "INFRA"  # 架构层次分类: INFRA/DATA_LAYER/SERVICE_LAYER/APP_LAYER/CROSS_LAYER
-owner: "owner@example.com"
+owner: "owner@{company_domain}"
 start_date: "2026-XX-XX"
 target_date: "2026-XX-XX"
 completed_date: ""  # 可选，仅在 status=COMPLETED 时填写
@@ -83,5 +83,5 @@ updated_at: "2026-XX-XX"
 ---
 
 **创建日期**: 2026-XX-XX
-**维护者**: owner@example.com
+**维护者**: owner@{company_domain}
 **相关 Epic**: [关联 Epic ID]

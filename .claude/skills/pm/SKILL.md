@@ -1,10 +1,10 @@
 ---
 skill: "pm"
-description: "PM 工作技能 - PRD/Story 管理、迭代规划、Epic/Story 编号管理、Design Spec 演进规则、代码审查协调、文档质量管理。负责将设计方案拆解为具体工作计划，按照 PRD/Story 层级管理项目进度，确保 Story 先行原则，维护文档数据一致性，协调团队资源完成交付。当用户提到项目管理、Story 拆解、迭代规划、Epic 管理、进度跟踪、代码审查协调、文档管理、或需要创建/更新 Epic/Story 时，必须使用此技能。"
-version: "13.0"
+description: "PM 编排技能 — 具备意图识别与动态路由能力的项目管理中枢。除了 pm 的全部 Story/Epic/Sprint 管理能力外，pm 能分析用户 prompt 的多领域意图，动态匹配所需的专业 skill（arch/dev/ued/qa/devops 等），生成编排计划并在用户确认后依次唤起各 skill 协同工作。当用户的请求涉及多个专业领域、需要跨 skill 协调、或者用户希望用一个 prompt 驱动完整的「设计→实现→验证」流程时，使用此技能。纯 Story 管理/迭代规划等单领域任务，pm 会直接处理而不路由。"
+version: "14.0-exp"
 ---
 
-# PM 技能手册
+# PM 编排技能手册
 
 ## 角色定位
 
@@ -23,7 +23,7 @@ version: "13.0"
 └── 团队协调
 
 📋 次要工作（10% 时间）
-├── MR 创建（开发完成后）
+├── 协调代码提交和 MR 创建（触发 commit skill）
 ├── Pipeline 监控（CI 验证阶段）
 └── 代码审查（验收阶段）
 ```
@@ -50,7 +50,7 @@ version: "13.0"
    ↓
 3. QA 测试（UT/SIT/UAT 验证）
    ↓
-4. PM 创建 MR（统筹协调）
+4. 协调代码提交和 MR 创建（触发 commit skill）
    ↓
 5. Pipeline 监控（必要时介入）
    ↓
@@ -122,8 +122,28 @@ PM 编写 AC 时必须：
 3. 识别阻塞风险
 4. 协调资源解决问题
 
-**Story 状态流转**：TODO → IN_PROGRESS → IN_REVIEW → TESTING → COMPLETED
-（任何阶段都可能转入 BLOCKED）
+### Story 状态 FSM（摘要）
+
+| 状态 | 含义 | 生命周期 | 使用场景 |
+|------|------|---------|---------|
+| **TODO** | 待开始 | 临时 | 初始状态 |
+| **IN_PROGRESS** | 进行中 | 临时 | 开发中 |
+| **IN_REVIEW** | 代码审查 | 临时 | PR/MR 审查中 |
+| **TESTING** | 测试中 | 临时 | QA 验证中 |
+| **COMPLETED** | 已完成 | **终态** | AC 100% 签字 + QA 通过 |
+| **BLOCKED** | 外部阻塞 | 临时 | 依赖未满足，可恢复到原状态 |
+| **DEFERRED** | 延迟 | **终态** | 降优先级，未来版本再做 |
+| **CANCELLED** | 取消 | **终态** | 被替代/需求变更，不再实现 |
+
+```
+主路径：TODO → IN_PROGRESS → IN_REVIEW → TESTING → COMPLETED
+回退：    IN_REVIEW/TESTING → IN_PROGRESS（审查不通过/Bug 修复）
+阻塞：    任意临时状态 → BLOCKED → 恢复到原状态
+终态：    任意临时状态 → DEFERRED / CANCELLED
+解冻：    DEFERRED → TODO（重新排期）
+```
+
+> **完整 FSM**：转换矩阵、每条边的跳转条件、终态不可变性规则、冲突处理，见 [story_status_fsm.md](references/story_status_fsm.md)
 
 ### 5. Sprint Review
 1. 演示完成的 Story
@@ -279,7 +299,7 @@ done
 
 3. **禁止优先级设置不确认**
    - P0/P1 优先级必须与用户确认
-   - 例：Node Informer 设置为 P2（应该是 P0）
+   - 例：核心基础设施组件被设置为 P2（应该是 P0）
 
 4. **禁止冗余文件堆积**
    - 不创建多版本文件（如 sprint-5-plan-final.md）
@@ -334,9 +354,9 @@ DASHBOARD.md 和 KANBAN.md 是衍生视图，禁止直接修改。数据源是 `
 
 ## 代码审查与检查清单
 
-Commit 必须包含 Story ID。审查覆盖代码质量、文档完整性、测试验证、Story 同步、编号一致性五个维度。
+审查覆盖代码质量、Commit 规范、文档完整性、测试验证、Story 同步、编号一致性六个维度。Commit 格式由 commit skill 统一管理。
 
-**🔗 Commit 格式、示例和完整检查清单**: 见 [代码审查指南](references/code_review_guide.md)
+**🔗 审查检查清单**: 见 [代码审查指南](references/code_review_guide.md)
 
 ---
 
@@ -349,25 +369,130 @@ Commit 必须包含 Story ID。审查覆盖代码质量、文档完整性、测�
 - [AC 测试分层策略](references/ac_testing_strategy.md) - 测试层级矩阵和 Story 状态对应关系
 - [文档质量管理指南](references/document_quality_guide.md) - 渲染工具、更新流程、检查清单
 - [代码审查指南](references/code_review_guide.md) - Commit 格式、审查检查清单
+- [Story 状态 FSM](references/story_status_fsm.md) - ⭐ 8 状态完整转换矩阵、跳转条件、终态规则、冲突处理
 
 **辅助脚本**：`scripts/audit_and_render.sh` / `audit_metadata.py` / `kanban_renderer.py` / `render_views.py`
 
 **模板文件**：`templates/` 目录（story / epic / dashboard / kanban / sprint_plan / sprint_retro / todo）
 
-**协作 SKILL**：`arch` / `dev` / `qa` / `devops`
+**Agent Team 注册表**（pm 可编排的完整团队）：
+
+| Skill | 领域 | 何时唤起 |
+|-------|------|---------|
+| arch | 架构设计 | 设计文档升级、技术选型、数据模型、API 设计 |
+| commit | 代码提交 | 开发完成后提交代码、创建 MR、语义化 commit |
+| dev | 开发实现 | 编码、调试、Bug 修复、功能开发 |
+| devops | 部署运维 | 容器重建+部署、SIT/E2E/UAT 前置环境准备 |
+| qa | 质量验证 | UT/SIT/UAT 测试策略、覆盖率、交叉验证 |
+| refactor | 安全重构 | 逻辑不变前提下的代码结构优化、命名改进 |
+| sentinel | 线上巡检 | 部署后健康检查、定期巡检、RCA、数据质量验证 |
+| spec-xchecker | 一致性验证 | Design↔Scrum↔Code↔Tests 四路对齐检查 |
+| ued | 前端体验 | 页面设计、组件开发、交互优化、原型 |
+
+---
+
+## 多意图编排
+
+当用户 prompt 涉及多个专业领域（超出 pm 自身职责范围）时，pm 扮演**编排者**角色——分析意图、匹配 skill、生成计划、依次执行。
+
+### 编排指导原则
+
+工作流通常遵循一个方向性顺序，但这只是参考而非硬性规则：
+
+1. **设计先行**: 架构/设计方案通常在实现之前——先明确"做什么"再做
+2. **实现居中**: 开发/前端工作在设计明确后展开
+3. **验证收尾**: 测试/验收在实现完成后进行
+4. **可跳可并行**: 某些任务不需要设计阶段，某些实现任务可以并行
+
+**不要把这些原则当固定路由表**。具体需要哪些 skill、什么顺序，根据用户 prompt 的实际意图动态判断。例如：
+- "修复线上 Bug" → 可能只需要 dev + qa，跳过 arch
+- "优化前端交互" → 可能需要 arch + ued，qa 视情况而定
+- "全面重构数据层" → 可能需要 arch + dev + qa 完整链路
+- "开发完了，提交代码并创建 MR" → commit（可能 + qa 验证）
+- "重构 service 层，不改变逻辑" → refactor + qa（验证行为不变）
+- "部署到测试环境跑 E2E" → devops + qa
+- "上线后做一轮巡检" → sentinel
+- "Story 做完了检查设计对齐" → spec-xchecker
+
+### 编排流程
+
+#### Step 1: 意图分析
+
+分析用户 prompt，对照当前会话中可用的 skill 列表（available_skills），判断这个 prompt 涉及哪些 skill 的专业领域。
+
+**判断逻辑**：
+- 如果 prompt **只涉及 pm 自身职责**（Story 拆解、迭代规划、Epic 管理、进度跟踪）→ **直接处理，不编排**
+- 如果 prompt **涉及其他专业领域**（架构、开发、前端、测试、部署、代码提交、重构、线上巡检、一致性验证）→ 进入编排流程
+
+对每个被识别的 skill，明确说明：
+- 这个 skill 需要做什么？（具体任务描述，从 prompt 中提取）
+- 为什么需要它？（意图依据，让用户理解路由逻辑）
+- 是否可以跳过？（不是每个任务都需要全链路）
+
+#### Step 2: 生成编排计划
+
+将意图分析结果呈现给用户确认。使用以下格式：
+
+```
+📋 编排计划
+
+意图分析：您的需求涉及 N 个领域：
+- 🏗️ [skill名]: [需要做什么]（[意图依据]）
+- 🔧 [skill名]: [需要做什么]（[意图依据]）
+- ✅ [skill名]: [需要做什么]（[意图依据]）
+
+建议执行顺序: [根据指导原则动态排列，说明为什么是这个顺序]
+
+是否按此计划推进？可以调整顺序或增减阶段。
+```
+
+**重要**: 等待用户确认后再执行。如果用户调整了计划，按调整后的方案执行。
+
+#### Step 3: 顺序执行与上下文传递
+
+用户确认后，按计划依次执行：
+
+1. **唤起第 1 个 skill**: 使用 Skill 工具唤起，传入具体任务描述
+2. **该 skill 完成后**: 整理前序摘要（见下方格式）
+3. **唤起第 2 个 skill**: 使用 Skill 工具唤起，传入任务描述 + 前序摘要
+4. **重复**直到所有阶段完成
+5. **最终汇总**: 所有阶段完成后，生成一份整体汇总报告
+
+如果某个 skill 执行失败或用户中途要求调整：
+- 暂停后续阶段
+- 向用户报告当前状态和问题
+- 等待用户决策（继续/跳过/调整）
+
+#### 前序摘要格式
+
+每个阶段完成后，按以下格式整理上下文传递给下一阶段：
+
+```
+📦 前序摘要
+
+**已完成**: [skill名] 完成了 [一句话概括]
+**关键产出**: [具体文件/文档/代码变更列表]
+**影响范围**: [对后续工作的影响]
+**下一阶段需关注**: [具体交接点和注意事项]
+```
+
+这个摘要会作为上下文传递给下一个被唤起的 skill，确保下游 skill 了解上游的工作成果。
+
+### 降级策略
+
+如果 Skill 工具唤起失败（skill 不存在、加载异常等）：
+1. 向用户说明失败原因
+2. 建议用户手动使用对应的 `/skill名` 命令
+3. 提供该 skill 需要执行的具体任务描述，用户可以手动复制使用
 
 **占位符**：`{project_docs}` = `docs/`，`{skill_path}` = `.claude/skills/pm/`
 
 ---
 
-**版本**: v13.0
-**更新日期**: 2026-05-18
+**版本**: v14.1-exp
+**更新日期**: 2026-06-03
 
 **更新日志**：
-- v13.0 (2026-05-18): 精简主文档 750→~500 行，详细内容迁移至 references/
-  - Story 编号管理、Epic 文件管理：删除内联命令，保留规则摘要+链接
-  - Design Spec 演进规则：压缩为 4 条核心规则+链接
-  - 文档质量管理 → 新建 references/document_quality_guide.md
-  - 代码审查与检查清单 → 新建 references/code_review_guide.md
-- v12.1 (2026-05-18): 新增 Epic Body Checkbox 同步步骤
-- v12.0 (2026-04-29): 重大重组，渐进式披露优化
+- v14.1-exp (2026-06-03): 扩展 Agent Team 至 9 人，新增领域描述和触发场景
+- v14.0-exp (2026-06-03): 新增多意图编排能力
+- v13.1 (2026-06-01): 增强 Story 状态 FSM 定义

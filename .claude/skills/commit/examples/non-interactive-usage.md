@@ -46,7 +46,7 @@ code_committer_mr_create \
 # ℹ️    目标分支: master
 # ℹ️    标题: feat(auth): implement JWT authentication
 # ✅ MR 创建成功: !123
-#    https://<git-host>/.../-/merge_requests/123
+#    https://git.example.com/.../-/merge_requests/123
 ```
 
 ## 示例 4: 一键提交+推送+创建 MR
@@ -74,7 +74,7 @@ code_committer_push_and_mr \
 # ✅ 工作项验证通过: "用户登录功能开发"
 # ℹ️  正在创建 GitLab MR...
 # ✅ MR 创建成功: !124
-#    https://<git-host>/.../-/merge_requests/124
+#    https://git.example.com/.../-/merge_requests/124
 ```
 
 ## 示例 5: 错误处理（退出码）

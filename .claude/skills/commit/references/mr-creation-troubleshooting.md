@@ -20,7 +20,7 @@ export GITLAB_PAT="your_pat_token_here"
 
 # 验证 PAT 权限（测试用户信息）
 curl -s --header "PRIVATE-TOKEN: ${GITLAB_PAT}" \
-  "https://<git-host>/api/v4/user" | python3 -c "
+  "https://git.example.com/api/v4/user" | python3 -c "
 import sys, json
 data = json.load(sys.stdin)
 print(f\"用户名: {data.get('username', 'N/A')}\")
@@ -30,8 +30,8 @@ print(f\"状态: {data.get('state', 'N/A')}\")
 "
 
 # 预期输出：
-# 用户名: project_10428_bot1
-# 用户ID: 1570
+# 用户名: project_bot
+# 用户ID: 1001
 # Bot: True
 # 状态: active
 ```
@@ -64,7 +64,7 @@ STORY-15-19: 数据库基础设施完整实施
 # 创建 MR 并捕获 HTTP 状态码
 RESPONSE=$(curl -s -w "\n%{http_code}" --request POST \
   --header "PRIVATE-TOKEN: ${GITLAB_PAT}" \
-  "https://<git-host>/api/v4/projects/example-org%2F{PROJECT_NAME}/merge_requests" \
+  "https://git.example.com/api/v4/projects/{namespace}%2F{PROJECT_NAME}/merge_requests" \
   --data-urlencode "source_branch=feat/epic-15-story-15-19-database-infrastructure" \
   --data-urlencode "target_branch=master" \
   --data-urlencode "title=feat(database): STORY-15-19 数据库基础设施完整实施" \
@@ -115,7 +115,7 @@ esac
 ```bash
 # 方法 1: 查询特定分支的最新 MR
 curl -s --header "PRIVATE-TOKEN: ${GITLAB_PAT}" \
-  "https://<git-host>/api/v4/projects/example-org%2F{PROJECT_NAME}/merge_requests?state=opened&source_branch=feat%2Fepic-15-story-15-19-database-infrastructure&order_by=created_at&sort=desc" \
+  "https://git.example.com/api/v4/projects/{namespace}%2F{PROJECT_NAME}/merge_requests?state=opened&source_branch=feat%2Fepic-15-story-15-19-database-infrastructure&order_by=created_at&sort=desc" \
   | python3 -c "
 import sys, json
 data = json.load(sys.stdin)
@@ -132,7 +132,7 @@ else:
 # 预期输出：
 # MR ID: 27
 # Title: feat(database): STORY-15-19 数据库基础设施完整实施
-# URL: https://<git-host>/example-org/{PROJECT_NAME}/-/merge_requests/27
+# URL: https://git.example.com/{namespace}/{PROJECT_NAME}/-/merge_requests/27
 # 飞书任务ID: 6934756567
 ```
 
@@ -153,7 +153,7 @@ else:
 ```bash
 # 验证飞书任务 ID 是否正确包含
 curl -s --header "PRIVATE-TOKEN: ${GITLAB_PAT}" \
-  "https://<git-host>/api/v4/projects/example-org%2F{PROJECT_NAME}/merge_requests/27" \
+  "https://git.example.com/api/v4/projects/{namespace}%2F{PROJECT_NAME}/merge_requests/27" \
   | python3 -c "
 import sys, json
 data = json.load(sys.stdin)
@@ -205,8 +205,8 @@ feishu.task: 6934756567
 # ============================================================
 # Step 1: 配置环境变量
 # ============================================================
-export GITLAB_PAT="B2zs93U9B99tx25qMzsH"
-PROJECT_ID="example-org%2F{PROJECT_NAME}"
+export GITLAB_PAT="$GITLAB_PAT"  # 从 .env.skill 读取，禁止硬编码
+PROJECT_ID="{namespace}%2F{PROJECT_NAME}"
 SOURCE_BRANCH="feat/epic-15-story-15-19-database-infrastructure"
 TARGET_BRANCH="master"
 MR_TITLE="feat(database): STORY-15-19 数据库基础设施完整实施"
@@ -217,7 +217,7 @@ MR_DESC_FILE="/tmp/mr_description.md"
 # ============================================================
 echo "Step 1: 验证 PAT 权限..."
 USER_INFO=$(curl -s --header "PRIVATE-TOKEN: ${GITLAB_PAT}" \
-  "https://<git-host>/api/v4/user")
+  "https://git.example.com/api/v4/user")
 
 USER_NAME=$(echo "$USER_INFO" | python3 -c "import sys, json; print(json.load(sys.stdin).get('username', 'N/A'))")
 
@@ -234,7 +234,7 @@ echo "✅ PAT 验证成功：用户名 $USER_NAME"
 echo "Step 2: 创建 MR..."
 RESPONSE=$(curl -s -w "\n%{http_code}" --request POST \
   --header "PRIVATE-TOKEN: ${GITLAB_PAT}" \
-  "https://<git-host>/api/v4/projects/${PROJECT_ID}/merge_requests" \
+  "https://git.example.com/api/v4/projects/${PROJECT_ID}/merge_requests" \
   --data-urlencode "source_branch=${SOURCE_BRANCH}" \
   --data-urlencode "target_branch=${TARGET_BRANCH}" \
   --data-urlencode "title=${MR_TITLE}" \
@@ -256,7 +256,7 @@ case "$HTTP_CODE" in
     sleep 2  # 等待 API 同步
 
     MR_INFO=$(curl -s --header "PRIVATE-TOKEN: ${GITLAB_PAT}" \
-      "https://<git-host>/api/v4/projects/${PROJECT_ID}/merge_requests?state=opened&source_branch=${SOURCE_BRANCH}&order_by=created_at&sort=desc")
+      "https://git.example.com/api/v4/projects/${PROJECT_ID}/merge_requests?state=opened&source_branch=${SOURCE_BRANCH}&order_by=created_at&sort=desc")
 
     MR_IID=$(echo "$MR_INFO" | python3 -c "import sys, json; data=json.load(sys.stdin); print(data[0].get('iid', 'N/A'))")
     MR_URL=$(echo "$MR_INFO" | python3 -c "import sys, json; data=json.load(sys.stdin); print(data[0].get('web_url', 'N/A'))")
@@ -310,11 +310,11 @@ esac
 ```bash
 # 1. 验证 PAT 用户信息
 curl -s --header "PRIVATE-TOKEN: ${GITLAB_PAT}" \
-  "https://<git-host>/api/v4/user" | python3 -m json.tool
+  "https://git.example.com/api/v4/user" | python3 -m json.tool
 
 # 2. 检查 PAT 权限范围（返回 scopes 字段）
 curl -s --header "PRIVATE-TOKEN: ${GITLAB_PAT}" \
-  "https://<git-host>/api/v4/personal_access_tokens/self" | python3 -c "import sys, json; print(json.load(sys.stdin).get('scopes', []))"
+  "https://git.example.com/api/v4/personal_access_tokens/self" | python3 -c "import sys, json; print(json.load(sys.stdin).get('scopes', []))"
 
 # 3. 确认 PAT 有 api 权限（应包含 'api'）
 ```
@@ -354,11 +354,11 @@ glab version
 # 方案 1: 手动验证（推荐）
 # 访问 MR 页面，查看描述是否正确显示
 echo "请手动访问 MR 页面验证飞书任务ID："
-echo "https://<git-host>/example-org/{PROJECT_NAME}/-/merge_requests/27"
+echo "https://git.example.com/{namespace}/{PROJECT_NAME}/-/merge_requests/27"
 
 # 方案 2: 使用正则表达式提取验证
 curl -s --header "PRIVATE-TOKEN: ${GITLAB_PAT}" \
-  "https://<git-host>/api/v4/projects/example-org%2F{PROJECT_NAME}/merge_requests/27" \
+  "https://git.example.com/api/v4/projects/{namespace}%2F{PROJECT_NAME}/merge_requests/27" \
   | python3 -c "
 import sys, json, re
 data = json.load(sys.stdin)
@@ -398,16 +398,16 @@ else:
 
 2. **验证 PAT 权限**：
    ```bash
-   export GITLAB_PAT="B2zs93U9B99tx25qMzsH"
+   export GITLAB_PAT="$GITLAB_PAT"  # 从 .env.skill 读取，禁止硬编码
    curl -s --header "PRIVATE-TOKEN: ${GITLAB_PAT}" \
-     "https://<git-host>/api/v4/user" | python3 -m json.tool
+     "https://git.example.com/api/v4/user" | python3 -m json.tool
    ```
 
 3. **创建 MR**：
    ```bash
    curl -s -w "\n%{http_code}" --request POST \
      --header "PRIVATE-TOKEN: ${GITLAB_PAT}" \
-     "https://<git-host>/api/v4/projects/example-org%2F{PROJECT_NAME}/merge_requests" \
+     "https://git.example.com/api/v4/projects/{namespace}%2F{PROJECT_NAME}/merge_requests" \
      --data-urlencode "source_branch=feat/epic-15-story-15-19-database-infrastructure" \
      --data-urlencode "target_branch=master" \
      --data-urlencode "title=feat(database): STORY-15-19 数据库基础设施完整实施" \
@@ -419,7 +419,7 @@ else:
    ```bash
    # 查询 MR 信息
    curl -s --header "PRIVATE-TOKEN: ${GITLAB_PAT}" \
-     "https://<git-host>/api/v4/projects/example-org%2F{PROJECT_NAME}/merge_requests?state=opened&source_branch=feat%2Fepic-15-story-15-19-database-infrastructure" \
+     "https://git.example.com/api/v4/projects/{namespace}%2F{PROJECT_NAME}/merge_requests?state=opened&source_branch=feat%2Fepic-15-story-15-19-database-infrastructure" \
      | python3 -c "
    import sys, json
    data = json.load(sys.stdin)
@@ -433,7 +433,7 @@ else:
    ```
    ✅ MR 创建成功！
    MR ID: !27
-   URL: https://<git-host>/example-org/{PROJECT_NAME}/-/merge_requests/27
+   URL: https://git.example.com/{namespace}/{PROJECT_NAME}/-/merge_requests/27
    飞书任务ID: 6934756567（已验证）
    ```
 

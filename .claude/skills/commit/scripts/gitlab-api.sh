@@ -130,8 +130,8 @@ error() {
 # GitLab 配置
 # ============================================
 
-# 从 git remote 推理 Git Host URL（支持 GitLab / GitHub / Gitea 等）
-# 输出: Git Host 基础 URL（如 https://gitlab.example.com 或 https://github.com）
+# 从 git remote 推理 GitLab URL
+# 输出: GitLab API 基础 URL（如 https://git.example.com）
 gitlab_detect_url() {
     local remote_url
     remote_url=$(git remote get-url origin 2>/dev/null)
@@ -144,53 +144,21 @@ gitlab_detect_url() {
 
     # 解析不同格式的 remote URL
     if [[ "$remote_url" =~ ^git@([^:]+): ]]; then
-        # SSH 格式: git@<host>:group/repo.git
+        # SSH 格式: git@git.example.com:group/repo.git
         local host
         host=$(echo "$remote_url" | sed -E 's|.*@([^:]+):.*|\1|')
         gitlab_url="https://$host"
     elif [[ "$remote_url" =~ ^https:// ]]; then
-        # HTTPS 格式: https://<host>/group/repo.git
+        # HTTPS 格式: https://git.example.com/group/repo.git
         gitlab_url=$(echo "$remote_url" | sed -E 's|https://([^/]+).*|\1|')
     elif [[ "$remote_url" =~ ^http:// ]]; then
-        # HTTP 格式: http://<host>/group/repo.git
+        # HTTP 格式: http://git.example.com/group/repo.git
         gitlab_url=$(echo "$remote_url" | sed -E 's|http://([^/]+).*|\1|')
     else
         return 1
     fi
 
     echo "$gitlab_url"
-    return 0
-}
-
-# 检测 Git 托管平台类型
-# 输出: gitlab | github | gitea | unknown
-git_host_detect_platform() {
-    local host_url
-    host_url=$(gitlab_detect_url)
-
-    if [ -z "$host_url" ]; then
-        echo "unknown"
-        return 1
-    fi
-
-    local host
-    host=$(echo "$host_url" | sed -E 's|https?://([^/]+).*|\1|')
-
-    case "$host" in
-        *github*|*GitHub*)
-            echo "github"
-            ;;
-        *gitlab*|*GitLab*)
-            echo "gitlab"
-            ;;
-        *gitea*|*Gitea*)
-            echo "gitea"
-            ;;
-        *)
-            # 默认按 GitLab API 兼容处理（大多数自托管平台兼容 GitLab API）
-            echo "gitlab"
-            ;;
-    esac
     return 0
 }
 
@@ -207,8 +175,8 @@ gitlab_get_project_path() {
     local project_path
 
     # 去掉协议和域名，获取项目路径
-    # SSH: git@<host>:group/repo.git -> group/repo
-    # HTTPS: https://<host>/group/repo.git -> group/repo
+    # SSH: git@git.example.com:group/repo.git -> group/repo
+    # HTTPS: https://git.example.com/group/repo.git -> group/repo
     project_path=$(echo "$remote_url" | sed -E 's|.*:([^:]+/[^/]+).*|\1|' | sed 's|\.git$||')
 
     echo "$project_path"
@@ -531,12 +499,8 @@ show_gitlab_config() {
     local project_path
     project_path=$(gitlab_get_project_path)
 
-    local platform
-    platform=$(git_host_detect_platform)
-
-    echo "📋 Git Host 配置信息:"
-    echo "   平台类型: $platform"
-    echo "   Host URL: $gitlab_url"
+    echo "📋 GitLab 配置信息:"
+    echo "   GitLab URL: $gitlab_url"
     echo "   项目路径: $project_path"
 
     local has_pat
@@ -556,8 +520,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     echo "  source scripts/gitlab-api.sh"
     echo ""
     echo "函数:"
-    echo "  gitlab_detect_url                          - 推理 Git Host URL"
-    echo "  git_host_detect_platform                   - 检测平台类型(gitlab/github/gitea)"
+    echo "  gitlab_detect_url                          - 推理 GitLab URL"
     echo "  gitlab_get_project_path                     - 获取项目路径"
     echo "  gitlab_get_pat                              - 获取 GitLab PAT"
     echo "  gitlab_create_mr <source> <target> <title> - 创建 MR"
