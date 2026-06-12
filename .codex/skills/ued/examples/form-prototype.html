@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Prototype - Form Wizard</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', -apple-system, 'PingFang SC', sans-serif;
+      background: #fafafa;
+      color: #18181b;
+      line-height: 1.6;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .wizard {
+      width: 100%;
+      max-width: 520px;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 8px 30px rgba(0,0,0,0.04);
+      padding: 40px;
+      margin: 24px;
+    }
+
+    /* Progress */
+    .progress-bar {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      margin-bottom: 32px;
+    }
+    .progress-step {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.8rem;
+      color: #a1a1aa;
+      white-space: nowrap;
+    }
+    .progress-step.active { color: #18181b; font-weight: 600; }
+    .progress-step.done { color: #22c55e; }
+    .progress-dot {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 2px solid #e4e4e7;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+    .progress-step.active .progress-dot { border-color: #18181b; background: #18181b; color: white; }
+    .progress-step.done .progress-dot { border-color: #22c55e; background: #22c55e; color: white; }
+    .progress-line { flex: 1; height: 2px; background: #e4e4e7; margin: 0 8px; }
+    .progress-line.done { background: #22c55e; }
+
+    /* Form */
+    .step { display: none; animation: fadeIn 0.3s ease; }
+    .step.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateX(8px); } to { opacity: 1; transform: translateX(0); } }
+
+    h2 { font-size: 1.35rem; font-weight: 700; margin-bottom: 4px; }
+    .step-desc { font-size: 0.85rem; color: #71717a; margin-bottom: 24px; }
+
+    .field { margin-bottom: 20px; }
+    .field label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 500;
+      margin-bottom: 6px;
+      color: #3f3f46;
+    }
+    .field input, .field select, .field textarea {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid #e4e4e7;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-family: inherit;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      background: white;
+    }
+    .field input:focus, .field select:focus, .field textarea:focus {
+      outline: none;
+      border-color: #18181b;
+      box-shadow: 0 0 0 3px rgba(24,24,27,0.06);
+    }
+    .field textarea { resize: vertical; min-height: 80px; }
+    .field-hint { font-size: 0.75rem; color: #a1a1aa; margin-top: 4px; }
+    .field-error { font-size: 0.75rem; color: #ef4444; margin-top: 4px; display: none; }
+    .field.error input { border-color: #ef4444; }
+    .field.error .field-error { display: block; }
+
+    /* Toggle */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 0;
+      border-bottom: 1px solid #f4f4f5;
+    }
+    .toggle-row:last-child { border-bottom: none; }
+    .toggle-label h4 { font-size: 0.9rem; font-weight: 500; }
+    .toggle-label p { font-size: 0.75rem; color: #a1a1aa; }
+    .toggle {
+      width: 44px;
+      height: 24px;
+      border-radius: 12px;
+      background: #e4e4e7;
+      cursor: pointer;
+      position: relative;
+      transition: background 0.2s;
+      flex-shrink: 0;
+    }
+    .toggle.on { background: #22c55e; }
+    .toggle::after {
+      content: '';
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: white;
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      transition: transform 0.2s;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    }
+    .toggle.on::after { transform: translateX(20px); }
+
+    /* Checkbox */
+    .check-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .checkbox {
+      width: 20px;
+      height: 20px;
+      border: 2px solid #d4d4d8;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 2px;
+      transition: all 0.15s;
+    }
+    .checkbox.checked { background: #18181b; border-color: #18181b; }
+    .checkbox.checked::after { content: '✓'; color: white; font-size: 0.7rem; font-weight: 700; }
+    .check-text { font-size: 0.85rem; color: #52525b; }
+
+    /* Buttons */
+    .actions { display: flex; gap: 12px; margin-top: 28px; }
+    .btn {
+      padding: 10px 24px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+      font-family: inherit;
+    }
+    .btn-ghost { background: transparent; color: #71717a; }
+    .btn-ghost:hover { color: #18181b; }
+    .btn-primary { background: #18181b; color: white; }
+    .btn-primary:hover { background: #27272a; }
+    .btn-success { background: #22c55e; color: white; }
+    .btn-success:hover { background: #16a34a; }
+
+    /* Summary card */
+    .summary-card {
+      background: #f4f4f5;
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+      font-size: 0.85rem;
+    }
+    .summary-row .label { color: #71717a; }
+    .summary-row .value { font-weight: 500; }
+  </style>
+</head>
+<body>
+
+<div class="wizard">
+  <!-- Progress -->
+  <div class="progress-bar">
+    <div class="progress-step active" id="ps1"><div class="progress-dot">1</div> 基本信息</div>
+    <div class="progress-line" id="pl1"></div>
+    <div class="progress-step" id="ps2"><div class="progress-dot">2</div> 配置</div>
+    <div class="progress-line" id="pl2"></div>
+    <div class="progress-step" id="ps3"><div class="progress-dot">3</div> 确认</div>
+  </div>
+
+  <!-- Step 1 -->
+  <div class="step active" id="step1">
+    <h2>创建项目</h2>
+    <p class="step-desc">填写项目基本信息</p>
+    <div class="field">
+      <label>项目名称</label>
+      <input type="text" id="name" placeholder="my-project">
+      <div class="field-hint">使用小写字母、数字和连字符</div>
+      <div class="field-error">项目名称不能为空</div>
+    </div>
+    <div class="field">
+      <label>显示名称</label>
+      <input type="text" id="display" placeholder="我的项目">
+    </div>
+    <div class="field">
+      <label>描述</label>
+      <textarea id="desc" placeholder="简要描述项目用途..."></textarea>
+    </div>
+    <div class="actions">
+      <div style="flex:1"></div>
+      <button class="btn btn-primary" onclick="goStep(2)">下一步 →</button>
+    </div>
+  </div>
+
+  <!-- Step 2 -->
+  <div class="step" id="step2">
+    <h2>项目配置</h2>
+    <p class="step-desc">选择项目的技术栈和功能开关</p>
+    <div class="field">
+      <label>技术栈</label>
+      <select id="stack">
+        <option value="go">Go + Gin</option>
+        <option value="python">Python + FastAPI</option>
+        <option value="node">Node.js + Express</option>
+        <option value="java">Java + Spring Boot</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>功能开关</label>
+      <div class="toggle-row">
+        <div class="toggle-label"><h4>CI/CD 流水线</h4><p>自动构建和部署</p></div>
+        <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+      </div>
+      <div class="toggle-row">
+        <div class="toggle-label"><h4>代码质量检查</h4><p>Lint + 格式化</p></div>
+        <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+      </div>
+      <div class="toggle-row">
+        <div class="toggle-label"><h4>安全扫描</h4><p>依赖漏洞检测</p></div>
+        <div class="toggle" onclick="this.classList.toggle('on')"></div>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="btn btn-ghost" onclick="goStep(1)">← 上一步</button>
+      <button class="btn btn-primary" onclick="goStep(3)">下一步 →</button>
+    </div>
+  </div>
+
+  <!-- Step 3 -->
+  <div class="step" id="step3">
+    <h2>确认创建</h2>
+    <p class="step-desc">确认以下信息无误后提交</p>
+    <div class="summary-card">
+      <div class="summary-row"><span class="label">项目名称</span><span class="value" id="s-name">—</span></div>
+      <div class="summary-row"><span class="label">显示名称</span><span class="value" id="s-display">—</span></div>
+      <div class="summary-row"><span class="label">技术栈</span><span class="value" id="s-stack">—</span></div>
+      <div class="summary-row"><span class="label">描述</span><span class="value" id="s-desc">—</span></div>
+    </div>
+    <div class="check-row">
+      <div class="checkbox" onclick="this.classList.toggle('checked')"></div>
+      <span class="check-text">我已阅读并同意《项目管理规范》和《代码仓库使用指南》</span>
+    </div>
+    <div class="actions">
+      <button class="btn btn-ghost" onclick="goStep(2)">← 上一步</button>
+      <button class="btn btn-success" onclick="submit()">创建项目</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let currentStep = 1;
+
+function goStep(step) {
+  if (step === 2 && currentStep === 1) {
+    const name = document.getElementById('name');
+    if (!name.value.trim()) {
+      name.parentElement.classList.add('error');
+      return;
+    }
+    name.parentElement.classList.remove('error');
+  }
+
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+  document.getElementById('step' + step).classList.add('active');
+
+  // Update progress
+  for (let i = 1; i <= 3; i++) {
+    const ps = document.getElementById('ps' + i);
+    ps.classList.remove('active', 'done');
+    if (i < step) ps.classList.add('done');
+    else if (i === step) ps.classList.add('active');
+  }
+  for (let i = 1; i <= 2; i++) {
+    const pl = document.getElementById('pl' + i);
+    pl.classList.toggle('done', i < step);
+  }
+
+  // Fill summary
+  if (step === 3) {
+    document.getElementById('s-name').textContent = document.getElementById('name').value || '—';
+    document.getElementById('s-display').textContent = document.getElementById('display').value || '—';
+    const stack = document.getElementById('stack');
+    document.getElementById('s-stack').textContent = stack.options[stack.selectedIndex].text;
+    document.getElementById('s-desc').textContent = document.getElementById('desc').value || '—';
+  }
+
+  currentStep = step;
+}
+
+function submit() {
+  alert('项目创建成功！（原型演示）');
+}
+</script>
+</body>
+</html>

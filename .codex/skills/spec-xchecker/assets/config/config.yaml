@@ -1,0 +1,72 @@
+# Spec-XChecker 配置文件
+
+# 检查模式配置
+modes:
+  quick:
+    timeout: 1  # 秒
+    check_metadata: true
+    check_ast: false
+    check_semantics: false
+
+  medium:
+    timeout: 10
+    check_metadata: true
+    check_ast: true
+    check_semantics: true
+
+  deep:
+    timeout: 60
+    check_metadata: true
+    check_ast: true
+    check_semantics: true
+    include_code_review: false  # 是否调用 /review
+
+# 检查范围配置
+scope:
+  ds: true  # Design Spec ↔ Scrum
+  sc: true  # Scrum ↔ Code
+  ct: true  # Code ↔ Tests (UT/API)
+  st: true  # Scrum ↔ Tests (SIT/UAT)
+
+# 阈值配置
+thresholds:
+  ut_coverage: 80  # %
+  api_coverage: 100  # %
+  sit_coverage: 90  # %
+  data_quality_score: 80  # /100
+
+# Design Spec 配置
+design_spec:
+  base_dir: "docs/design"
+  epic_design_map:
+    "Epic-12": "docs/design/cmdb/cmdb_overview_v4.0.md"
+    "Epic-15": "docs/design/data_layer/data_layer_architecture_v4.2.md"
+  fallback_patterns:
+    - "**/*design*.md"
+    - "**/*spec*.md"
+    - "**/README.md"
+
+# Story 文档配置
+story:
+  base_dir: "docs/scrum/story"
+  story_pattern: "story-{story_id}-*.md"
+
+# 代码配置
+code:
+  base_dir: "internal"
+  go_extensions: [".go"]
+  python_extensions: [".py"]
+
+# 测试配置
+test:
+  ut_dir: "tests/unit"
+  api_dir: "tests/api"
+  sit_dir: "tests/sit"
+  uat_dir: "tests/uat"
+  python_test_pattern: "test_*.py"
+
+# 输出配置
+output:
+  base_dir: "/tmp/xchecker"
+  formats: ["markdown", "json"]
+  include_passed_checks: false  # 是否包含通过的检查项

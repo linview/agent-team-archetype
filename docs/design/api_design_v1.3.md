@@ -450,7 +450,7 @@ GET /api/v1/gpu/usage?start_time=2026-03-20&end_time=2026-03-23&aggregate_by=nod
       {
         "time_bucket": null,
         "dimensions": {
-          "node_name": "k8s-example-org-gpu-2-216"
+          "node_name": "k8s-gpu-node-2-216"
         },
         "total_gpu_hours": 10833.56,
         "record_count": 2346,
@@ -459,7 +459,7 @@ GET /api/v1/gpu/usage?start_time=2026-03-20&end_time=2026-03-23&aggregate_by=nod
       {
         "time_bucket": null,
         "dimensions": {
-          "node_name": "k8s-example-org-gpu-2-210"
+          "node_name": "k8s-gpu-node-2-210"
         },
         "total_gpu_hours": 8666.86,
         "record_count": 3229,
@@ -489,7 +489,7 @@ GET /api/v1/gpu/usage?start_time=2026-03-20&aggregate_by=node,namespace
       {
         "time_bucket": null,
         "dimensions": {
-          "node_name": "k8s-example-org-gpu-2-216",
+          "node_name": "k8s-gpu-node-2-216",
           "namespace": "train-job"
         },
         "total_gpu_hours": 5433.2,
@@ -521,7 +521,7 @@ GET /api/v1/gpu/usage?start_time=2026-03-20 00:00:00&end_time=2026-03-20 23:59:5
       {
         "time_bucket": "2026-03-20T00:00:00+08:00",
         "dimensions": {
-          "node_name": "k8s-example-org-gpu-2-216",
+          "node_name": "k8s-gpu-node-2-216",
           "namespace": "train-job"
         },
         "total_gpu_hours": 45.2,
@@ -561,7 +561,7 @@ GET /api/v1/gpu/usage?start_time=2026-03-20&end_time=2026-03-23&aggregate_by=tea
       {
         "dimensions": {
           "team_id": "127",
-          "team_name": "EXAMPLE-ORG团队"
+          "team_name": "示例团队"
         },
         "total_gpu_hours": 567.8,
         "record_count": 80,

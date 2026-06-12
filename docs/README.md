@@ -1,7 +1,7 @@
-# EXAMPLE-ORG example-service 文档中心
+# 示例业务文档中心
 
 **更新时间**: 2026-01-31
-**维护者**: EXAMPLE-ORG 团队
+**维护者**: 示例团队
 
 ---
 
@@ -133,8 +133,8 @@
 
 **✅ 正确定义** (v2.1 + 实际调研):
 - **系统**: 独立的开发环境管理系统
-- **服务**: `example-service` API (`git@<git-host>:example-org/example-service.git`)
-- **镜像**: `docker.example.com/example-org/example-service`
+- **服务**: `example-service` API (`git@git.example.com:example-org/example-service.git`)
+- **镜像**: `registry.example.com/example-org/example-service`
 - **K8s 资源**: StatefulSet (namespace: `example-service`)
 - **功能**: 提供可挂载 NFS/GPU 的 SSH 开发容器
 
@@ -147,7 +147,7 @@
 ### CMDB 数据库选择
 
 **✅ 正确选择**:
-- **主数据库**: event_db (PostgreSQL @ 127.0.0.1:32432)
+- **主数据库**: event_db (PostgreSQL @ db.example.internal:32432)
 - **用途**: 存储 CMDB 维度表、example-service 生命周期、{BUSINESS_DESCRIPTION}
 - **理由**: 集中管理，符合现有架构
 

@@ -153,6 +153,17 @@ AI 在 AI-Native 开发中的角色：
 
 **结论**：AI 的执行能力和总结能力，让人类快速验证架构决策，但关键决策仍需人类智慧。
 
+### Part I 常见问题
+
+**Q: AI-Native 开发是否意味着人类完全不需要写代码？**
+A: 不是。人类仍然需要编写关键逻辑、审查代码、做出架构决策。AI-Native 开发的核心转变是人类从"逐行实现"变为"设计意图→验证结果"——人类专注于"做什么"和"为什么"，AI 承担"怎么做"和"验证对不对"。
+
+**Q: 如何衡量 AI-Native 项目的开发效率？**
+A: 传统指标（代码行数、提交频率）不再适用。AI-Native 的关键指标是：1) 设计-实现一致性（spec-xchecker 通过率）2) 测试覆盖率（UT/API/SIT/UAT） 3) 发布成功率 4) 从 Design 到上线的周期时间 5) 返工率（意图偏差导致的重写比例）。
+
+**Q: 人类角色"从实现者转变为设计者"具体怎么做？**
+A: 实践中这意味着：1) 先写 Design Doc 再让 Agent 实现 2) 验收时对比 Design 和实际产出，而非逐行 review 代码 3) 发现问题时先更新 Design，再让 Agent 修正实现 4) 把精力放在需求澄清、架构选型和验收标准定义上。
+
 ---
 
 # Part II: 方法篇 - 设计驱动的工程化开发
@@ -361,6 +372,17 @@ Test (测试验证)
 - 逻辑一致性：业务逻辑是否在 Code 和 Test 中正确实现
 - 数据一致性：数据模型是否在 Code 和 Test 中正确使用
 - 验收一致性：验收标准是否在 Test 中覆盖
+
+### Part II 常见问题
+
+**Q: Design 文档和 Code 注释有什么区别？**
+A: Design 文档是 SSOT（唯一真实来源），定义"系统应该是什么样"；Code 注释解释"这段代码做了什么"。Design 驱动 Code，Code 实现 Design。Design 变更时，Code 必须跟进；反之不然。Design 面向人类和 AI 的理解，Code 注释面向维护者。
+
+**Q: 语义化版本控制只适用于 Design 文档吗？**
+A: 核心是 Design 文档版本化，但版本号会传导到 Scrum（Story 引用 Design 版本）、Code（注释标注 Design 版本）和 Test（测试用例关联 Design 版本）。四路版本对齐是三域一致性的基础——参见 Chapter 4.3 的版本传导机制。
+
+**Q: spec-xchecker 发现不一致时如何修复？**
+A: 修复顺序遵循 SSOT 原则：以 Design 为准，1) 先确认 Design 是否需要更新（如果 Design 本身有误，更新 Design）2) 再同步 Code 和 Test 3) 最后更新 Scrum（Story 的验收标准）。修复后重新运行 spec-xchecker 验证。
 
 ---
 
@@ -730,7 +752,7 @@ Agent 在 YOLO mode 下：
 
 **MR 要求**：
 
-> "提供一个包含'设计、代码、测试'三者俱全的 MR 例子：https://<git-host>/example-org/resource-meter/-/merge_requests/41/diffs"
+> "提供一个包含'设计、代码、测试'三者俱全的 MR 例子：https://git.example.com/example-org/resource-meter/-/merge_requests/41/diffs"
 
 > "一般我会再 MR 里确保三个领域（design/code/test）的内容是可以相互佐证的才会提交。"
 
@@ -959,6 +981,20 @@ claude
 - 快速验证架构决策
 - 持续迭代优化
 
+### Part III 常见问题
+
+**Q: 意图对齐要花多长时间？值得吗？**
+A: 意图对齐通常只需 5-10 分钟（一次对话），但能节省数小时的返工。Agent 理解偏差在 YOLO Mode 下会被放大——越晚发现，修复成本越高。建议每次开发前都做意图对齐，尤其是新 Story 或复杂逻辑时。
+
+**Q: YOLO Mode 下 Agent 出错怎么办？**
+A: YOLO Mode 不是"放任不管"：1) Agent 完成后会主动通知结果 2) 检查关键逻辑是否正确 3) 运行测试验证 4) 如果偏差较大，停止 Agent，重新意图对齐后再开发。Agent 的错误通常源于意图不清晰，而非能力不足。
+
+**Q: 并行开发时多个 Agent 修改同一文件怎么办？**
+A: 这正是 Worktree 存在的意义——每个 Worktree 是独立的工作区，Agent 在各自的 worktree 中工作，不会互相冲突。合并时通过 MR 的 rebase 机制解决冲突。设计时应尽量让 Story 之间的文件修改不重叠（参见 Chapter 8 并行开发规范）。
+
+**Q: 阶梯发布中哪一阶段最容易出问题？**
+A: 统计上看，测试环境验证（Stage 3→4）是问题高发区：配置差异、数据差异、环境依赖都可能导致测试环境通过但生产失败。建议在测试环境尽量模拟生产配置，使用相同的 Helm values 结构。
+
 ---
 
 # Part IV: 工具篇 - Agent 与技能体系
@@ -1104,6 +1140,17 @@ services:
 # 运行四路交叉验证
 /spec-xchecker
 ```
+
+### Part IV 常见问题
+
+**Q: 如何自定义 Agent Skill？**
+A: 在 `.claude/skills/` 下创建目录，编写 `SKILL.md`（必需，定义触发条件和指令），可选添加 `scripts/`（可执行脚本）、`references/`（参考文档）、`templates/`（模板）。SKILL.md 的 `description` 字段决定触发时机，建议写得宽泛一些避免漏触发。完整规范参考 `.claude/skills/` 下现有 Skill 的结构。
+
+**Q: Skill 的触发机制是什么？**
+A: Skill 通过两种方式触发：1) 用户输入 `/skill名`（如 `/dev`、`/qa`）直接触发 2) Agent 根据用户自然语言中的关键词匹配 SKILL.md 的 `description` 字段自动触发。如果 Skill 未被触发，通常是 description 覆盖的场景不够——可以补充关键词或换一种说法。
+
+**Q: 新项目如何快速配置 Agent Team？**
+A: 复制本项目（agent-team-archetype）作为模板：1) 保留 `.claude/skills/` 目录结构 2) 修改各 Skill 中与业务相关的模板和配置 3) 在 `.env.skill` 中配置项目凭证 4) 根据项目技术栈调整 `scripts/` 中的脚本。详见 Chapter 13.3 项目模板创建。
 
 ---
 
@@ -1273,21 +1320,82 @@ project-template/
 
 ### 15.3 常见陷阱与解决方案
 
-🔧 **TODO**: 待补充
+以下陷阱基于 AI-Native 开发实践总结，每条包含症状、根因分析和具体解决步骤。
 
-**常见陷阱**：
+#### 陷阱 1: Design 文档不完整
 
-1. **陷阱**：Design 文档不完整
-   - **解决方案**：强制要求 Design 文档作为开发前置条件
+**症状**：Agent 生成的代码偏离预期，频繁返工；不同 Agent 对同一功能理解不一致。
 
-2. **陷阱**：Test 滞后于 Code
-   - **解决方案**：TDD（测试驱动开发），先写测试再写代码
+**根因**：Design 文档缺少关键信息（数据模型、接口定义、业务规则），Agent 只能"猜测"意图。
 
-3. **陷阱**：三域不一致
-   - **解决方案**：使用 spec-xchecker 工具定期验证
+**解决步骤**：
+1. 建立 Design 文档模板（参考 Appendix A），至少包含：数据模型、API 接口、核心业务逻辑、非功能需求
+2. 开发前强制检查 Design 文档完整性——作为 `/dev` 的前置条件
+3. 使用 `/arch` skill 生成 Design 初稿，人类审查补充后作为 SSOT
+4. Design 版本化，每次变更记录变更原因和影响范围
 
-4. **陷阱**：Agent 理解偏差
-   - **解决方案**：意图对齐环节，确认 Agent 理解正确
+#### 陷阱 2: Test 滞后于 Code
+
+**症状**：代码写完后测试覆盖率低，补测试变成形式主义；回归测试发现问题时已积累大量代码变更。
+
+**根因**：将测试视为"验证步骤"而非"设计验证器"，没有利用测试来固化 Design 的意图。
+
+**解决步骤**：
+1. 采用分级测试策略（Chapter 6）：UT 随代码写，API 测试随接口写，SIT/UAT 在本地验证通过后再提测
+2. 在 Story 验收标准中用 `[UT]`/`[API]`/`[SIT]` 标签明确测试要求（参见 PM Skill 的 AC 测试分层策略）
+3. 使用 `/qa` skill 基于验收标准自动生成测试计划
+4. 本地验证门禁：`make test` + `pytest tests/api/` 全部通过后才推送代码
+
+#### 陷阱 3: 三域不一致
+
+**症状**：Design 描述的接口和代码实现不匹配；测试用例覆盖的是旧版逻辑；MR 审查时发现 Design-Code-Test 对不上。
+
+**根因**：Design 更新后没有同步更新 Code 和 Test，或者 Code 改了但 Design 没跟上。缺乏自动化的跨域验证机制。
+
+**解决步骤**：
+1. 每次提交前运行 `/spec-xchecker` 进行四路交叉验证（Design ↔ Scrum ↔ Code ↔ Tests）
+2. Design 版本变更时，更新 Story 中的版本引用，标记受影响的 Story 为 BLOCKED
+3. MR 必须包含 Design、Code、Test 三部分，审查时检查三域对齐
+4. 建立 Design 版本传导机制：Design 版本 → Story 引用 → Code 注释 → Test 关联
+
+#### 陷阱 4: Agent 理解偏差
+
+**症状**：Agent 生成的代码功能正确但实现路径不符合设计意图；意图对齐环节草草了事。
+
+**根因**：人类对"意图对齐"不够重视，提供的上下文不足（只给 Story 文件路径，未指出关键约束），或者对齐后没有明确确认。
+
+**解决步骤**：
+1. 每次开发前执行意图对齐：让 Agent 读取 Design + Story，总结理解，人类确认后再进入 YOLO Mode
+2. 对齐时明确指出：核心功能点、技术约束、验收标准、与其他模块的交互方式
+3. 开发过程中保持监控，Agent 完成关键节点后主动通知（参见 `/dev` skill 的通知机制）
+4. 如果发现偏差，立即停止，重新对齐后再继续——不要期望 Agent 自己纠正
+
+#### 陷阱 5: Story 粒度过大
+
+**症状**：一个 Story 跨越多周开发，测试反馈周期长，阻塞其他 Story 进度，MR 巨大难以审查。
+
+**根因**：Story 拆解时没有遵循 INVEST 原则（尤其是 Small），把一个 Epic 当成一个 Story。
+
+**解决步骤**：
+1. 遵循 INVEST 原则拆解 Story，推荐粒度 2-5 个工作日，最大不超过 1 个 Sprint
+2. 使用 `/pm` skill 拆解，PM 检查每个 Story 的独立性（Independent）和可测试性（Testable）
+3. Story 之间通过文件路径和模块边界解耦，避免修改同一文件
+4. 大功能拆为多个 Story，按依赖关系排序，上游 Story 先完成
+
+#### 陷阱 6: 跳过 Code Review 直接合并
+
+**症状**：代码合并后生产环境出问题；Design 和实现脱节；技术债务积累。
+
+**根因**：赶进度跳过审查，或者审查只看代码风格不看 Design 对齐。
+
+**解决步骤**：
+1. MR 必须包含 Design + Code + Test 三部分，缺一不可
+2. 审查时检查三个维度（参见 `/pm` skill 的代码审查指南）：
+   - 架构审查：代码是否符合 Design 的架构意图
+   - 任务审查：验收标准是否全部满足，Story 状态是否可流转
+   - 测试审查：测试覆盖是否达标，三域是否一致
+3. 使用 `/spec-xchecker` 在 MR 合并前做最终一致性验证
+4. Human Review 重点关注 Design-Code 对齐，而非逐行代码审查
 
 ### 15.4 实施路线图建议
 
@@ -1315,6 +1423,17 @@ project-template/
 - 持续优化流程
 - 持续优化 Agent 能力
 - 持续提升工程成熟度
+
+### Part V 常见问题
+
+**Q: 团队从零开始实施 AI-Native 开发，第一步做什么？**
+A: 先搭建环境（Claude Code CLI + Git worktree），再按 Part V 的路线图走 Phase 1：选择一个小项目试点，定义 Agent 技能（`.claude/skills/`），创建项目模板。不要一开始就全面铺开——先用一个 Sprint 跑通流程，再逐步推广。
+
+**Q: 已有项目如何迁移到 AI-Native 开发模式？**
+A: 建议增量迁移：1) 先为已有模块补充设计文档（Design Spec），建立 SSOT 2) 补充测试用例，建立质量基线 3) 配置 Agent Skills，从新 feature 开始使用 AI-Native 流程 4) 使用 `/spec-xchecker` 验证迁移后的三域一致性。
+
+**Q: 如何评估团队的 AI-Native 工程成熟度？**
+A: 参考 Chapter 14 的评估维度：设计驱动成熟度、测试分层成熟度、Agent 协作成熟度、持续优化成熟度。建议每周做一次项目审计（参见 PM Skill 的每周审计清单），用数据驱动改进。
 
 ---
 

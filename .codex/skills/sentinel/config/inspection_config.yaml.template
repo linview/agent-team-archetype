@@ -1,0 +1,303 @@
+# ============================================================
+# # Regular Checker - 巡检配置文件
+# # ============================================================
+# # 说明：此文件定义了不同环境的巡检配置，支持自动环境检测
+# # 用法：脚本会自动读取此文件，无需手动设置环境变量
+# # ============================================================
+
+# # ============================================================
+# # 环境配置
+# # ============================================================
+environments:
+  # 本地开发环境
+  dev:
+    name: "本地开发环境"
+    api_url: "http://localhost:8082/api/v1"
+    db_host: "localhost"
+    db_port: 5433
+    db_name: "app_db-dev"
+    db_user: "CHANGEME"
+    db_password: "CHANGEME"
+    # 可选：覆盖默认环境变量
+    env_vars:
+      SERVICE_API_URL: "http://localhost:8082/api/v1"
+      DB_HOST: "localhost"
+      DB_PORT: "5433"
+      DB_NAME: "app_db-dev"
+      DB_USER: "CHANGEME"
+      DB_PASSWORD: "CHANGEME"
+
+  # 测试环境
+  test:
+    name: "测试环境"
+    api_url: "http://<YOUR_DB_HOST>:30882/api/v1"
+    db_host: "<YOUR_DB_HOST>"
+    db_port: 32432
+    db_name: "app_db"
+    db_user: "CHANGEME"
+    db_password: "CHANGEME"
+    env_vars:
+      SERVICE_API_URL: "http://<YOUR_DB_HOST>:30882/api/v1"
+      DB_HOST: "<YOUR_DB_HOST>"
+      DB_PORT: "32432"
+      DB_NAME: "app_db"
+      DB_USER: "CHANGEME"
+      DB_PASSWORD: "CHANGEME"
+
+  # 生产环境
+  prod:
+    name: "生产环境"
+    api_url: "http://<YOUR_PROD_API_HOST>:31676/api/v1"
+    db_host: "<YOUR_DB_HOST>"
+    db_port: 32432
+    db_name: "app_db"
+    db_user: "CHANGEME"
+    db_password: "CHANGEME"
+    env_vars:
+      SERVICE_API_URL: "http://<YOUR_PROD_API_HOST>:31676/api/v1"
+      DB_HOST: "<YOUR_DB_HOST>"
+      DB_PORT: "32432"
+      DB_NAME: "app_db"
+      DB_USER: "CHANGEME"
+      DB_PASSWORD: "CHANGEME"
+    # 备选 API 地址（高可用）
+    api_urls:
+      - "http://<YOUR_PROD_API_HOST>:31676/api/v1"
+      - "http://<YOUR_PROD_API_HOST_STANDBY>:31676/api/v1"
+
+# # ============================================================
+# # 巡检级别配置
+# # ============================================================
+inspection_levels:
+  # 快速巡检（每小时）
+  quick:
+    name: "快速巡检"
+    description: "API Smoke Tests - 验证服务可用性"
+    max_duration: 30  # 最大执行时间（秒）
+    test_suites:
+      - "tests/api/api_smoke.py"
+    on_failure:
+      notify: true  # 是否发送通知
+      stop_on_error: false  # 遇到错误是否停止
+
+  # 标准巡检（每天）
+  standard:
+    name: "标准巡检"
+    description: "API + SIT(只读) + UAT(只读) - 验证服务和数据质量"
+    max_duration: 180  # 最大执行时间（秒）
+    test_suites:
+      - "tests/api/api_smoke.py"
+      - "tests/sit/test_data_quality_validation.py"
+      - "tests/uat/test_gpu_accuracy_mock.py"  # 只读：GPU 计算验证（Mock 数据）
+    on_failure:
+      notify: true
+      stop_on_error: false
+
+  # 深度巡检（每周）
+  deep:
+    name: "深度巡检"
+    description: "API + SIT + UAT - 全面验证"
+    max_duration: 600  # 最大执行时间（秒）
+    test_suites:
+      - "tests/api/"
+      - "tests/sit/"
+      - "tests/uat/test_gpu_accuracy.py"
+    on_failure:
+      notify: true
+      stop_on_error: false
+
+  # 时间粒度回归测试（Epic-13）
+  time_granularity:
+    name: "时间粒度回归测试"
+    description: "验证不同时间窗口的聚合粒度（day/hour/minute/none）"
+    max_duration: 300  # 最大执行时间（秒）
+    test_suites:
+      - "tests/api/api_gpu_aggregate.py::TestTimeAggregation"
+      - "tests/api/api_gpu_aggregate.py::TestSmartTimeParsing"
+    on_failure:
+      notify: true
+      stop_on_error: false
+
+# # ============================================================
+# # 报告配置
+# # ============================================================
+report:
+  # 报告存储目录
+  output_dir: "test_reports/inspection"
+
+  # 报告保留天数
+  retention_days: 7
+
+  # 报告格式
+  formats:
+    - "markdown"  # Markdown 摘要报告
+    - "html"      # HTML 详细报告
+
+  # 报告命名格式
+  # 支持的占位符：{level}, {env}, {timestamp}, {date}, {time}
+  naming_pattern: "inspection_{level}_{env}_{timestamp}.md"
+
+# # ============================================================
+# # 通知配置
+# # ============================================================
+notification:
+  # 是否启用通知
+  enabled: false  # 默认关闭，需要时手动开启
+
+  # 邮件通知
+  email:
+    enabled: false
+    smtp_host: "smtp.example.com"
+    smtp_port: 587
+    smtp_user: "noreply@example.com"
+    # 密码从环境变量读取：SMTP_PASSWORD
+    from: "Service Monitor <noreply@example.com>"
+    to:
+      - "dev1@example.com"
+      - "dev2@example.com"
+    # 仅在失败时发送
+    on_failure_only: true
+
+  # Slack 通知
+  slack:
+    enabled: false
+    # Webhook URL 从环境变量读取：SLACK_WEBHOOK_URL
+    webhook_url_env: "SLACK_WEBHOOK_URL"
+    channel: "#{PROJECT_NAME}-alerts"
+    username: "Service Monitor"
+    icon_emoji: ":warning:"
+    on_failure_only: true
+
+  # 钉钉通知
+  dingtalk:
+    enabled: false
+    # Webhook URL 从环境变量读取：DINGTALK_WEBHOOK_URL
+    webhook_url_env: "DINGTALK_WEBHOOK_URL"
+    secret_env: "DINGTALK_SECRET"
+    on_failure_only: true
+
+# # ============================================================
+# # GitLab CI 集成配置
+# # ============================================================
+gitlab_ci:
+  # 定时任务配置
+  scheduled_pipelines:
+    # 快速巡检：每小时
+    quick:
+      enabled: false
+      cron: "0 * * * *"  # 每小时的第 0 分钟
+      timezone: "Asia/Shanghai"
+      environments:
+        - "test"
+        - "prod"
+
+    # 标准巡检：每天凌晨 2 点
+    standard:
+      enabled: false
+      cron: "0 2 * * *"  # 每天凌晨 2 点
+      timezone: "Asia/Shanghai"
+      environments:
+        - "test"
+        - "prod"
+
+    # 深度巡检：每周日凌晨 2 点
+    deep:
+      enabled: false
+      cron: "0 2 * * 0"  # 每周日凌晨 2 点
+      timezone: "Asia/Shanghai"
+      environments:
+        - "test"
+
+    # 时间粒度回归测试：每周一、三、五下午 3 点
+    time_granularity:
+      enabled: false
+      cron: "0 15 * * 1,3,5"  # 每周一、三、五下午 3 点
+      timezone: "Asia/Shanghai"
+      environments:
+        - "test"
+        - "prod"
+
+  # GitLab CI Variables（需要在 GitLab 中配置）
+  required_variables:
+    - "TEST_DB_PASSWORD"
+    - "PROD_DB_PASSWORD"
+    - "SLACK_WEBHOOK_URL"  # 可选，用于通知
+    - "SMTP_PASSWORD"      # 可选，用于邮件通知
+
+# # ============================================================
+# # 数据质量阈值
+# # ============================================================
+quality_thresholds:
+  # 数据质量评分最低要求（百分比）
+  min_quality_score: 70
+
+  # GPU 计算误差最大允许值（百分比）
+  max_gpu_calculation_error: 5
+
+  # CMDB 维度覆盖率最低要求（百分比）
+  min_cmdb_coverage: 95
+
+  # 时区一致性检查：是否允许 ended_at < created_at
+  allow_timezone_inconsistency: false
+
+  # {BUSINESS_SHORT}负值检查：是否允许负值
+  allow_negative_gpu_hours: false
+
+# # ============================================================
+# # 高级配置
+# # ============================================================
+advanced:
+  # pytest 选项
+  pytest_options:
+    - "-v"              # 详细输出
+    - "--tb=short"      # 简短的错误回溯
+    - "--strict-markers" # 严格的标记检查
+
+  # 并行执行
+  parallel:
+    enabled: false  # 是否启用并行测试执行
+    workers: 2      # 并发 worker 数量
+
+  # 重试配置
+  retry:
+    enabled: false   # 是否启用失败重试
+    max_retries: 2   # 最大重试次数
+    retry_delay: 5   # 重试延迟（秒）
+
+  # 超时配置
+  timeout:
+    enabled: true    # 是否启用测试超时
+    test_timeout: 120 # 单个测试超时（秒）
+    suite_timeout: 600 # 测试套件超时（秒）
+
+# # ============================================================
+# # 调试配置
+# # ============================================================
+debug:
+  # 是否启用调试模式
+  enabled: false
+
+  # 调试日志级别
+  log_level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+
+  # 是否保存详细日志
+  save_detailed_logs: false
+
+  # 详细日志保存目录
+  log_dir: "test_reports/inspection/logs"
+
+# # ============================================================
+# # 自定义配置
+# # ============================================================
+custom:
+  # 项目特定的自定义配置
+  project_name: "<YOUR_PROJECT>"
+  project_version: "v3.3"
+  team_name: "<YOUR_TEAM>"
+  contact_email: "contact@example.com"
+
+  # 标签（用于报告分类和过滤）
+  tags:
+    - "gpu-monitoring"
+    - "kubernetes"
+    - "data-quality"

@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Prototype Template - Dashboard</title>
+  <!--
+    HTML 原型模板 v1.0
+    用途：快速生成可浏览器预览的页面原型
+    特点：自包含（无外部依赖）、Mock 数据、可交互、有动效
+    使用：复制此文件，修改 mock 数据、布局、组件即可
+  -->
+  <style>
+    /* === 主题变量 — 修改这里改变全局配色 === */
+    :root {
+      --color-primary: #2563eb;
+      --color-primary-light: #dbeafe;
+      --color-accent: #f59e0b;
+      --color-success: #10b981;
+      --color-danger: #ef4444;
+      --color-warning: #f59e0b;
+      --color-bg: #f1f5f9;
+      --color-surface: #ffffff;
+      --color-text: #1e293b;
+      --color-text-muted: #64748b;
+      --color-border: #e2e8f0;
+      --radius: 6px;
+      --shadow: 0 1px 3px rgba(0,0,0,0.08);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+      --transition: 0.2s ease;
+    }
+
+    /* === 重置 === */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      color: var(--color-text);
+      background: var(--color-bg);
+      line-height: 1.6;
+      font-size: 14px;
+    }
+
+    /* === 布局：侧栏 + 顶栏 + 主内容 === */
+    .layout {
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      grid-template-rows: 52px 1fr;
+      height: 100vh;
+    }
+    .layout-header {
+      grid-column: 1 / -1;
+      background: var(--color-surface);
+      border-bottom: 1px solid var(--color-border);
+      display: flex;
+      align-items: center;
+      padding: 0 24px;
+      gap: 16px;
+    }
+    .layout-header .logo { font-weight: 700; font-size: 1.1rem; color: var(--color-primary); }
+    .layout-header .search {
+      flex: 1;
+      max-width: 400px;
+      padding: 6px 12px;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      font-size: 0.875rem;
+    }
+    .layout-header .search:focus { outline: none; border-color: var(--color-primary); }
+    .layout-sidebar {
+      background: var(--color-surface);
+      border-right: 1px solid var(--color-border);
+      padding: 12px 8px;
+      overflow-y: auto;
+    }
+    .layout-main {
+      overflow-y: auto;
+      padding: 24px;
+    }
+
+    /* === 侧栏导航 === */
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 14px;
+      border-radius: var(--radius);
+      color: var(--color-text-muted);
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: var(--transition);
+      text-decoration: none;
+    }
+    .nav-item:hover { background: var(--color-primary-light); color: var(--color-text); }
+    .nav-item.active { background: var(--color-primary-light); color: var(--color-primary); font-weight: 600; }
+    .nav-icon { font-size: 1rem; }
+    .nav-section { font-size: 0.7rem; color: var(--color-text-muted); padding: 16px 14px 4px; text-transform: uppercase; letter-spacing: 0.05em; }
+
+    /* === 页面标题 === */
+    .page-header { margin-bottom: 24px; }
+    .page-title { font-size: 1.5rem; font-weight: 700; }
+    .page-desc { color: var(--color-text-muted); font-size: 0.875rem; margin-top: 4px; }
+
+    /* === KPI 卡片网格 === */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .kpi-card {
+      background: var(--color-surface);
+      border-radius: var(--radius);
+      padding: 20px;
+      box-shadow: var(--shadow);
+      cursor: pointer;
+      transition: transform var(--transition), box-shadow var(--transition);
+    }
+    .kpi-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+    .kpi-label { font-size: 0.8rem; color: var(--color-text-muted); font-weight: 500; }
+    .kpi-value { font-size: 1.75rem; font-weight: 700; margin: 4px 0; }
+    .kpi-footer { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+    .kpi-trend { font-size: 0.8rem; font-weight: 600; }
+    .trend-up { color: var(--color-success); }
+    .trend-down { color: var(--color-danger); }
+    .kpi-status {
+      font-size: 0.7rem;
+      padding: 1px 6px;
+      border-radius: 10px;
+      font-weight: 600;
+    }
+    .status-healthy { background: #dcfce7; color: #166534; }
+    .status-warning { background: #fef3c7; color: #92400e; }
+    .status-error   { background: #fee2e2; color: #991b1b; }
+
+    /* === 两列布局 === */
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    /* === 面板 === */
+    .panel {
+      background: var(--color-surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--color-border);
+    }
+    .panel-title { font-weight: 600; font-size: 0.95rem; }
+    .panel-body { padding: 16px 20px; }
+
+    /* === 活动流 === */
+    .activity-item {
+      display: flex;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--color-border);
+    }
+    .activity-item:last-child { border-bottom: none; }
+    .activity-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.9rem;
+      flex-shrink: 0;
+    }
+    .activity-icon.mr { background: #dbeafe; }
+    .activity-icon.pipeline { background: #dcfce7; }
+    .activity-icon.artifact { background: #fef3c7; }
+    .activity-title { font-size: 0.875rem; font-weight: 500; }
+    .activity-meta { font-size: 0.75rem; color: var(--color-text-muted); margin-top: 2px; }
+
+    /* === 表格 === */
+    .data-table { width: 100%; border-collapse: collapse; }
+    .data-table th {
+      text-align: left;
+      padding: 10px 12px;
+      font-weight: 600;
+      font-size: 0.8rem;
+      color: var(--color-text-muted);
+      border-bottom: 2px solid var(--color-border);
+    }
+    .data-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--color-border);
+      font-size: 0.875rem;
+    }
+    .data-table tr:hover td { background: var(--color-primary-light); }
+
+    /* === 标签页 === */
+    .tabs { display: flex; border-bottom: 2px solid var(--color-border); margin-bottom: 16px; }
+    .tab {
+      padding: 8px 18px;
+      border: none;
+      background: none;
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--color-text-muted);
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      transition: var(--transition);
+    }
+    .tab:hover { color: var(--color-text); }
+    .tab.active { color: var(--color-primary); border-bottom-color: var(--color-primary); }
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; }
+
+    /* === 按钮 === */
+    .btn {
+      padding: 7px 14px;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      background: var(--color-surface);
+      cursor: pointer;
+      font-size: 0.8rem;
+      transition: var(--transition);
+    }
+    .btn:hover { background: var(--color-bg); }
+    .btn-primary { background: var(--color-primary); color: white; border-color: var(--color-primary); }
+    .btn-primary:hover { opacity: 0.9; }
+
+    /* === 搜索/筛选栏 === */
+    .toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 16px; }
+    .toolbar input, .toolbar select {
+      padding: 7px 12px;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      font-size: 0.85rem;
+    }
+    .toolbar input:focus, .toolbar select:focus {
+      outline: none;
+      border-color: var(--color-primary);
+    }
+
+    /* === 展开面板 === */
+    .accordion-body {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+    }
+    .accordion-item.open .accordion-body { max-height: 500px; }
+    .accordion-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 20px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+    .accordion-header:hover { background: var(--color-bg); }
+    .accordion-arrow {
+      font-size: 0.7rem;
+      transition: transform 0.3s ease;
+    }
+    .accordion-item.open .accordion-arrow { transform: rotate(180deg); }
+
+    /* === 模态框 === */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal {
+      background: var(--color-surface);
+      border-radius: 8px;
+      width: 90%;
+      max-width: 480px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+      animation: modalIn 0.25s ease;
+    }
+    @keyframes modalIn {
+      from { transform: translateY(16px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--color-border);
+    }
+    .modal-header h3 { font-size: 1rem; }
+    .modal-close {
+      border: none;
+      background: none;
+      font-size: 1.4rem;
+      cursor: pointer;
+      color: var(--color-text-muted);
+    }
+    .modal-body { padding: 20px; }
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      padding: 12px 20px;
+      border-top: 1px solid var(--color-border);
+    }
+
+    /* === 加载动画（错开出现） === */
+    .stagger { opacity: 0; transform: translateY(10px); animation: fadeUp 0.3s ease forwards; }
+    .stagger:nth-child(1) { animation-delay: 0.0s; }
+    .stagger:nth-child(2) { animation-delay: 0.05s; }
+    .stagger:nth-child(3) { animation-delay: 0.1s; }
+    .stagger:nth-child(4) { animation-delay: 0.15s; }
+    .stagger:nth-child(5) { animation-delay: 0.2s; }
+    .stagger:nth-child(6) { animation-delay: 0.25s; }
+    @keyframes fadeUp {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* === 骨架屏 === */
+    .skeleton {
+      background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 4px;
+    }
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+
+    /* === 空状态 === */
+    .empty-state { text-align: center; padding: 48px 20px; color: var(--color-text-muted); }
+    .empty-icon { font-size: 2.5rem; margin-bottom: 8px; }
+
+    /* === 图表占位 === */
+    .chart-placeholder {
+      width: 100%;
+      height: 260px;
+      background: var(--color-bg);
+      border-radius: var(--radius);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--color-text-muted);
+      font-size: 0.85rem;
+      border: 1px dashed var(--color-border);
+    }
+  </style>
+</head>
+<body>
+
+<div class="layout">
+  <!-- 顶栏 -->
+  <header class="layout-header">
+    <span class="logo">Dev Loop</span>
+    <input class="search" type="text" placeholder="搜索需求、MR、制品...">
+    <span style="font-size:0.8rem;color:var(--color-text-muted)">👤 Admin</span>
+  </header>
+
+  <!-- 侧栏 -->
+  <aside class="layout-sidebar">
+    <div class="nav-section">全域</div>
+    <a class="nav-item active"><span class="nav-icon">📊</span> 仪表盘</a>
+    <a class="nav-item"><span class="nav-icon">📋</span> 需求</a>
+    <div class="nav-section">追溯</div>
+    <a class="nav-item"><span class="nav-icon">🔀</span> 代码</a>
+    <a class="nav-item"><span class="nav-icon">📦</span> 制品</a>
+    <a class="nav-item"><span class="nav-icon">🧪</span> 测试</a>
+    <div class="nav-section">工具</div>
+    <a class="nav-item"><span class="nav-icon">🔗</span> 链路追踪</a>
+    <a class="nav-item"><span class="nav-icon">⚖️</span> 版本对比</a>
+  </aside>
+
+  <!-- 主内容 -->
+  <main class="layout-main">
+    <div class="page-header stagger">
+      <h1 class="page-title">全域总览</h1>
+      <p class="page-desc">研发闭环质量看板 — 汇总 CI/CD、制品、测试、需求数据</p>
+    </div>
+
+    <!-- KPI 卡片 -->
+    <div class="kpi-grid" id="kpi-grid">
+      <!-- JS 动态填充 -->
+    </div>
+
+    <!-- 两列：雷达图 + 活动流 -->
+    <div class="two-col stagger">
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">质量雷达</span>
+        </div>
+        <div class="panel-body">
+          <div class="chart-placeholder">📊 雷达图区域（ECharts 渲染）</div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">最近活动</span>
+        </div>
+        <div class="panel-body" id="activity-list">
+          <!-- JS 动态填充 -->
+        </div>
+      </div>
+    </div>
+
+    <!-- 需求链路追踪（展开面板） -->
+    <div class="panel stagger" style="margin-bottom:24px">
+      <div class="accordion-item" id="chain-section">
+        <div class="accordion-header" onclick="toggleAccordion('chain-section')">
+          需求链路追踪
+          <span class="accordion-arrow">▼</span>
+        </div>
+        <div class="accordion-body">
+          <div class="panel-body">
+            <div class="toolbar">
+              <select id="chain-select">
+                <option value="">选择需求...</option>
+              </select>
+              <button class="btn btn-primary" onclick="showChain()">追踪</button>
+            </div>
+            <div class="chart-placeholder" id="chain-chart">
+              🔗 Sankey 图区域（选择需求后显示链路）
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 标签页：需求列表 -->
+    <div class="panel stagger">
+      <div class="tabs">
+        <button class="tab active" data-tab="all">全部</button>
+        <button class="tab" data-tab="active">进行中</button>
+        <button class="tab" data-tab="done">已完成</button>
+      </div>
+      <div class="panel-body">
+        <div class="toolbar">
+          <input type="text" placeholder="搜索 ID 或标题...">
+          <select><option>全部类型</option><option>需求</option><option>Bug</option></select>
+        </div>
+        <div class="tab-pane active" id="tab-all">
+          <table class="data-table">
+            <thead>
+              <tr><th>ID</th><th>标题</th><th>类型</th><th>状态</th><th>更新时间</th></tr>
+            </thead>
+            <tbody id="work-items-body">
+              <!-- JS 动态填充 -->
+            </tbody>
+          </table>
+        </div>
+        <div class="tab-pane" id="tab-active">
+          <div class="empty-state"><div class="empty-icon">📋</div><p>进行中的工作项将显示在这里</p></div>
+        </div>
+        <div class="tab-pane" id="tab-done">
+          <div class="empty-state"><div class="empty-icon">✅</div><p>已完成的工作项将显示在这里</p></div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- 模态框示例 -->
+<div class="modal-overlay" id="detail-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modal-title">详情</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="modal-body" id="modal-body">
+      <!-- 动态填充 -->
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">关闭</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// === Mock 数据 ===
+const MOCK = {
+  kpiCards: [
+    { label: 'CI/CD 流水线', value: 128, trend: '+12.5%', trendDir: 'up', status: 'healthy', icon: '⚡' },
+    { label: '制品产物', value: 256, trend: '+5.2%', trendDir: 'up', status: 'healthy', icon: '📦' },
+    { label: '集成测试', value: 48, trend: '-2.1%', trendDir: 'down', status: 'warning', icon: '🧪' },
+    { label: '数据健康', value: 96, trend: '+0.5%', trendDir: 'up', status: 'healthy', icon: '📊' },
+  ],
+  activities: [
+    { type: 'mr', icon: '🔀', title: 'feat: 添加用户认证模块', meta: '张三 · 10 分钟前', bg: 'mr' },
+    { type: 'pipeline', icon: '✅', title: '#128 构建成功', meta: 'CI Bot · 25 分钟前', bg: 'pipeline' },
+    { type: 'artifact', icon: '📦', title: 'v2.3.1 发布到 JFrog', meta: '李四 · 1 小时前', bg: 'artifact' },
+    { type: 'mr', icon: '🔀', title: 'fix: 修复分页查询参数', meta: '王五 · 2 小时前', bg: 'mr' },
+    { type: 'pipeline', icon: '❌', title: '#127 构建失败', meta: 'CI Bot · 3 小时前', bg: 'pipeline' },
+  ],
+  workItems: [
+    { id: 'WI-001', title: '用户登录功能', type: '需求', status: 'success', time: '2026-05-28' },
+    { id: 'WI-002', title: '数据导出优化', type: '需求', status: 'warning', time: '2026-05-27' },
+    { id: 'WI-003', title: '权限管理重构', type: '需求', status: 'error', time: '2026-05-26' },
+    { id: 'WI-004', title: 'Dashboard 三层架构', type: '需求', status: 'success', time: '2026-05-25' },
+    { id: 'WI-005', title: 'API 分页参数修复', type: 'Bug', status: 'success', time: '2026-05-24' },
+  ],
+  chainItems: [
+    { id: 'WI-001', desc: '用户登录功能' },
+    { id: 'WI-002', desc: '数据导出优化' },
+    { id: 'WI-003', desc: '权限管理重构' },
+  ],
+};
+
+// === 渲染函数 ===
+
+function renderKPI() {
+  const grid = document.getElementById('kpi-grid');
+  grid.innerHTML = MOCK.kpiCards.map(card => `
+    <div class="kpi-card stagger" onclick="showDetail('${card.label}', '${card.value}')">
+      <div class="kpi-label">${card.icon} ${card.label}</div>
+      <div class="kpi-value">${card.value}</div>
+      <div class="kpi-footer">
+        <span class="kpi-trend trend-${card.trendDir}">${card.trend}</span>
+        <span class="kpi-status status-${card.status}">${card.status === 'healthy' ? '健康' : card.status === 'warning' ? '警告' : '异常'}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderActivities() {
+  const list = document.getElementById('activity-list');
+  list.innerHTML = MOCK.activities.map(a => `
+    <div class="activity-item">
+      <div class="activity-icon ${a.bg}">${a.icon}</div>
+      <div>
+        <div class="activity-title">${a.title}</div>
+        <div class="activity-meta">${a.meta}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderWorkItems() {
+  const tbody = document.getElementById('work-items-body');
+  tbody.innerHTML = MOCK.workItems.map(item => {
+    const statusLabel = item.status === 'success' ? '通过' : item.status === 'warning' ? '警告' : '失败';
+    return `
+      <tr onclick="showDetail('${item.id}', '${item.title}')" style="cursor:pointer">
+        <td>${item.id}</td>
+        <td>${item.title}</td>
+        <td>${item.type}</td>
+        <td><span class="kpi-status status-${item.status}">${statusLabel}</span></td>
+        <td>${item.time}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function renderChainSelect() {
+  const select = document.getElementById('chain-select');
+  MOCK.chainItems.forEach(item => {
+    const opt = document.createElement('option');
+    opt.value = item.id;
+    opt.textContent = `${item.id}: ${item.desc}`;
+    select.appendChild(opt);
+  });
+}
+
+// === 交互函数 ===
+
+function toggleAccordion(id) {
+  document.getElementById(id).classList.toggle('open');
+}
+
+function showChain() {
+  const select = document.getElementById('chain-select');
+  const chart = document.getElementById('chain-chart');
+  if (select.value) {
+    chart.innerHTML = `🔗 显示 ${select.value} 的链路：<br><br>需求 → MR → Commit → 制品 → CI Pipeline<br><br><span style="color:var(--color-text-muted)">（Sankey 图将在此渲染）</span>`;
+  }
+}
+
+function showDetail(title, value) {
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-body').innerHTML = `
+    <p>这里显示 <strong>${title}</strong> 的详细信息。</p>
+    <p style="margin-top:8px;color:var(--color-text-muted)">当前值：${value}</p>
+    <p style="margin-top:16px;font-size:0.8rem;color:var(--color-text-muted)">这是原型演示，实际数据将从 API 获取。</p>
+  `;
+  document.getElementById('detail-modal').classList.add('active');
+}
+
+function closeModal() {
+  document.getElementById('detail-modal').classList.remove('active');
+}
+
+// 点击遮罩关闭模态框
+document.getElementById('detail-modal').addEventListener('click', (e) => {
+  if (e.target.classList.contains('modal-overlay')) closeModal();
+});
+
+// 标签页切换
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+  });
+});
+
+// === 初始化 ===
+renderKPI();
+renderActivities();
+renderWorkItems();
+renderChainSelect();
+</script>
+
+</body>
+</html>

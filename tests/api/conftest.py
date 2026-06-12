@@ -31,10 +31,10 @@ def api_base_url():
         return os.environ["RESOURCE_METER_API_URL"]
 
     # 优先级 2: 自动检测测试环境 API（开发模式便利性）
-    # 检测测试环境 NodePort 服务 (127.0.0.10:30882)
+    # 检测测试环境 NodePort 服务 (test-api.example.internal:30882)
     try:
         # 尝试连接测试环境健康检查端点
-        test_api_url = "http://127.0.0.10:30882/api/v1"
+        test_api_url = "http://test-api.example.internal:30882/api/v1"
         response = requests.get(f"{test_api_url}/healthz", timeout=2)
         if response.status_code == 200:
             print(f"\n✅ 自动检测到测试环境 API: {test_api_url}")
@@ -46,5 +46,5 @@ def api_base_url():
     default_url = "http://localhost:8082/api/v1"
     print(f"\n⚠️  使用默认本地 API: {default_url}")
     print(f"💡 提示：可通过环境变量自定义 API 地址")
-    print(f"   export RESOURCE_METER_API_URL=\"http://127.0.0.10:30882/api/v1\"")
+    print(f"   export RESOURCE_METER_API_URL=\"http://test-api.example.internal:30882/api/v1\"")
     return default_url

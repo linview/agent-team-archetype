@@ -519,6 +519,17 @@ cd ../project-feature-b
 claude --dangerously-skip-permissions
 ```
 
+### Part 1 常见问题
+
+**Q: Skill 触发关键词是什么？**
+A: Skill 通过 `/` 命令触发（如 `/arch`、`/pm`、`/dev`、`/qa`、`/devops`、`/commit`、`/sentinel`），也支持自然语言关键词匹配。全局技能位于 `~/.claude/skills/`，项目技能位于 `.claude/skills/`。具体触发词见各 SKILL.md 的 `description` 字段。
+
+**Q: Worktree 和普通分支切换有什么区别？**
+A: Worktree 允许同时检出多个分支到不同目录，每个目录有独立的工作区状态，适合并行开发多个 feature。普通 `git checkout` 切换分支时会丢失当前分支的工作区状态（除非先 stash 或 commit）。
+
+**Q: `.env.skill` 文件是做什么的？**
+A: 存储项目特定的凭证信息（如 GitLab PAT），已被 `.gitignore` 忽略不会提交到 Git 仓库。Skills 脚本从该文件读取配置（如 `GITLAB_PAT=glpat-xxx`）。如果文件不存在，commit skill 的 `gitlab-api.sh` 会自动提示创建。
+
 ---
 
 ## Part 2: 设计阶段
@@ -598,6 +609,17 @@ mkdir -p docs/scrum/story
 # 查看 Story 文档
 cat docs/scrum/story/story-15-25.md
 ```
+
+### Part 2 常见问题
+
+**Q: Design 文档写到什么程度才算完整？**
+A: 至少包含数据模型、API 接口定义、核心业务逻辑流程三个部分。完整模板参考 `docs/guides/ai_native_development_guide_book.md` Appendix A 的设计文档模板，以及 `.claude/skills/arch/SKILL.md`。
+
+**Q: Design 版本号什么时候该升？**
+A: 数据模型变更、API 接口变更、核心逻辑变更时升 MINOR（如 v4.0→v4.1）；架构重大调整、影响多个模块时升 MAJOR（如 v4.x→v5.0）。bug 修复或小改进升 PATCH。详见 [Part 6: Design 版本管理](#63-design-版本管理)。
+
+**Q: 如何验证 Design 和代码实现一致？**
+A: 使用 `/spec-xchecker` 进行四路交叉验证（Design ↔ Scrum ↔ Code ↔ Tests），检查接口一致性、逻辑一致性、数据一致性和验收一致性。详见 [Part 6: 三域一致性验证](#62-三域一致性验证)。
 
 ---
 
@@ -730,6 +752,20 @@ pytest tests/sit/ -v
 docker-compose logs -f
 ```
 
+### Part 3 常见问题
+
+**Q: 如何在多个 feature 之间并行开发？**
+A: 使用 `git worktree add ../project-feature-a feature-a` 创建独立工作树，每个 worktree 启动独立的 Claude Code session，互不影响。开发完成后用 `git worktree remove ../project-feature-a` 清理。详见 [Part 1: 创建 Worktree](#13-创建-worktree)。
+
+**Q: Agent 生成的代码不符合设计意图怎么办？**
+A: 1) 加强意图对齐环节，让 Agent 先总结理解再开发 2) 提供更详细的设计文档引用（精确到章节） 3) 开发过程中及时反馈和矫正 4) 使用 `/spec-xchecker` 验证 Design-Code 一致性。
+
+**Q: Skill 没有被正确触发怎么办？**
+A: Skill 通过 `/skill名`（如 `/arch`、`/dev`）直接触发，也支持自然语言匹配。如果未触发，尝试更明确的关键词（如"巡检"触发 sentinel，"提交代码"触发 commit），或检查 `.claude/skills/<skill>/SKILL.md` 的 description 字段是否覆盖了你的场景。
+
+**Q: commit message 格式有什么要求？**
+A: 本项目不强制 Conventional Commits 格式，但推荐语义化描述。Agent 会基于代码变更自动生成 commit message，参考项目最近的 commit 风格。详见 `.claude/skills/commit/SKILL.md`。
+
 ---
 
 ## Part 4: 测试阶段
@@ -828,6 +864,20 @@ pytest tests/uat/ -v --html=test_reports/uat-report.html
 
 **UAT 测试覆盖目标**: ≥ 85%
 
+### Part 4 常见问题
+
+**Q: 四层测试（UT/API/SIT/UAT）分别测什么？**
+A: UT 测函数逻辑（`internal/**/*_test.go`），API 测接口契约（`tests/api/`），SIT 测业务流程（`tests/sit/`），UAT 测用户场景（`tests/uat/`）。详见 `.claude/skills/qa/SKILL.md` 中的测试分层定义。
+
+**Q: 测试覆盖率不达标怎么办？**
+A: 1) 使用 `go test -cover ./internal/...` 查看具体覆盖率 2) 优先补充核心逻辑的测试用例 3) 检查测试框架配置是否正确（`tests/conftest.py`）。
+
+**Q: SIT 测试需要什么环境？**
+A: SIT 测试需要 K8s 集群或 Docker Compose 环境。使用 Docker Compose 时执行 `cd deploy/docker && docker-compose up -d`；使用 K8s 时设置 `KUBECONFIG` 环境变量指向测试集群。参考 `tests/sit/conftest.py`。
+
+**Q: 如何让 QA agent 自动生成测试策略？**
+A: 使用 `/qa` skill，提供 Story 文件路径（如 `docs/scrum/story/story-15-25.md`），QA 会基于验收标准自动生成测试计划和用例。
+
 ---
 
 ## Part 5: 发布阶段
@@ -887,10 +937,10 @@ docker-compose down
 ./deploy/scripts/helm-upgrade.sh test snapshot-mr-30
 
 # 验证部署
-kubectl get pods -n example-org
+kubectl get pods -n <namespace>
 
 # 查看日志
-kubectl logs -f deployment/app -n example-org
+kubectl logs -f deployment/app -n <namespace>
 ```
 
 **镜像 Tag 策略**: `snapshot-mr-{IID}`
@@ -933,6 +983,17 @@ kubectl logs -f deployment/app -n production
 # 验证回滚
 kubectl get pods -n production
 ```
+
+### Part 5 常见问题
+
+**Q: Helm 发布失败怎么排查？**
+A: 三步排查：1) `helm list -n <namespace>` 查看 Release 状态 2) `kubectl get events -n <namespace>` 查看集群事件 3) `kubectl describe pod <pod-name> -n <namespace>` 查看 Pod 详情。常见原因：镜像拉取失败、资源不足、配置错误。
+
+**Q: 如何回滚已发布的版本？**
+A: 使用 `./deploy/scripts/helm-rollback.sh <env>` 快速回滚，或手动执行 `helm rollback <release> <revision> -n <namespace>`。建议先 `helm history <release> -n <namespace>` 确认回滚目标版本。
+
+**Q: MR 创建前必须做什么？**
+A: 必须先同步目标分支：`git fetch origin <target-branch>` && `git rebase origin/<target-branch>`，避免 MR 包含已合并的变更。详见 `/commit` skill 的铁律。
 
 ---
 
@@ -1021,6 +1082,17 @@ vim docs/design/cmdb_design_v4.2.md
 # 更新相关代码和测试
 # 确保三域对齐
 ```
+
+### Part 6 常见问题
+
+**Q: 如何执行线上巡检？**
+A: 使用 `/sentinel` skill 或直接运行 `./.claude/skills/sentinel/scripts/inspect <level> <env>`。支持 smoke（冒烟）、sanity（健全）、full（完整）三个级别，默认 sanity。环境支持 dev/test/prod，默认 test。
+
+**Q: Design Spec 更新后，旧 Story 怎么处理？**
+A: 遵循 Design Spec 演进规则：已完成工作保留（COMPLETED 不可篡改），进行中的 Story 标记 BLOCKED 并更新引用。详见 `.claude/skills/pm/SKILL.md` 中的 Design Spec 演进规则。
+
+**Q: 如何查看项目进度？**
+A: 使用 `/pm` skill 查看看板和仪表板。数据源在 `docs/scrum/story/` 和 `docs/scrum/prd/`，`KANBAN.md` 和 `DASHBOARD.md` 是自动生成的衍生视图，不要直接修改——先更新源文件，再同步视图。
 
 ---
 
@@ -1136,7 +1208,7 @@ pytest tests/ -v --html=test_reports/report.html
 **解决方案**：
 1. 检查 Helm Charts 配置
 2. 检查 K8s 集群连接
-3. 查看 Helm Release 状态：`helm list -n example-org`
+3. 查看 Helm Release 状态：`helm list -n <namespace>`
 
 ---
 
@@ -1502,7 +1574,7 @@ pytest tests/ -v --html=test_reports/report.html
 
 ### 实践案例
 
-- **[MR !41 示例](https://<git-host>/example-org/resource-meter/-/merge_requests/41/diffs)** - 包含设计、代码、测试的完整 MR
+- **[MR !41 示例](https://git.example.com/example-org/resource-meter/-/merge_requests/41/diffs)** - 包含设计、代码、测试的完整 MR
 
 ---
 

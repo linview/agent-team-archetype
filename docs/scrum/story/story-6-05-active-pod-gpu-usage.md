@@ -90,7 +90,7 @@ updated_at: "2026-04-21"
 ```json
 {
   "resource_id": "res-001",
-  "pod_name": "example-service-chenhuazhong",
+  "pod_name": "example-service-user2",
   "gpu_count": 4,
   "usage_cycle": 1,
   "usage_start_at": "2026-02-02T10:00:00Z",
@@ -450,4 +450,4 @@ delete test-active-001 example-service
 ---
 
 **最后更新**: 2026-02-02
-**维护者**: user@example.com
+**维护者**: dev1@example.com

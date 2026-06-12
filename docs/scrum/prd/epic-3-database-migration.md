@@ -5,7 +5,7 @@ description: "编写数据库迁移脚本，支持开发和生产环境的数据
 status: "COMPLETED"
 priority: "P0"
 layer: "INFRA"
-owner: "user@example.com"
+owner: "dev1@example.com"
 start_date: "2026-02-07"
 target_date: "2026-02-08"
 stories:

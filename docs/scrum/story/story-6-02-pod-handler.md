@@ -7,7 +7,7 @@ status: "COMPLETED"
 completed_date: "2026-04-21"
 priority: "P0"
 story_points: 5
-assignee: "user@example.com"
+assignee: "dev1@example.com"
 reviewer: ""
 start_date: "2026-02-01"
 target_date: "2026-02-01"

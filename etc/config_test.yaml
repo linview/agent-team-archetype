@@ -40,7 +40,7 @@ DatabaseConf:
 # ⚠️ 注意：测试时会监听生产 K8s 集群事件，但只写入测试数据库
 Kubeconfig:
   # 使用 kubeconfig 文件进行认证（推荐用于 Docker 开发环境）
-  K8sKubeconfigPath: "/home/user/.kube/config"
+  K8sKubeconfigPath: "/path/to/kubeconfig"
   # 以下字段留空，使用 kubeconfig 文件中的配置
   K8sApiServerUrl: ""
   K8sBearerToken: ""

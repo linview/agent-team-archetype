@@ -7,8 +7,8 @@ status: "COMPLETED"
 completed_date: "2026-04-21"
 priority: "P0"
 story_points: 3
-assignee: "user@example.com"
-reviewer: "user@example.com"
+assignee: "dev1@example.com"
+reviewer: "dev1@example.com"
 start_date: "2026-01-31"
 target_date: "2026-01-31"
 dependencies: []
@@ -113,7 +113,7 @@ syntax = "v1"
 info(
     title: "{BUSINESS_DESCRIPTION}服务"
     desc: "{BUSINESS_DESCRIPTION}与查询 API"
-    author: "user@example.com"
+    author: "dev1@example.com"
     version: "v1.0"
 )
 
@@ -365,7 +365,7 @@ curl http://localhost:8082/api/v1/health/healthz
 ### 9.1 参考文档
 
 - [Go-Zero 官方文档](https://go-zero.dev/)
-- [example-service 项目](https://git.example.com/example-org/example-service)
+- [sample_service 项目](https://git.example.com/example-org/sample_service)
 
 ### 9.2 设计文档链接
 

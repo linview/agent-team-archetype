@@ -1,0 +1,48 @@
+# 项目进度看板
+**更新时间**: {{ update_time }}
+**说明**: 本文档基于 `docs/scrum/metadata.json` 自动生成
+
+---
+
+## 📊 项目总览
+- **Epic 总数**: {{ statistics.total_epics }}
+- **Story 总数**: {{ statistics.total_stories }}
+- **已完成 Story**: {{ statistics.completed_stories }} ({{ statistics.completion_rate }})
+- **完成进度**: {{ statistics.completed_stories }}/{{ statistics.total_stories }}
+
+---
+
+## 📊 Epic 进度总览
+| Epic ID | 标题 | 状态 | 优先级 | Story 进度 | 完成度 |
+|---------|------|------|--------|-----------|--------|
+{% for epic in epics -%}
+{% set filled_blocks = epic.completion_rate // 10 -%}
+{% set empty_blocks = 10 - filled_blocks -%}
+{% set progress_bar = '█' * filled_blocks + '░' * empty_blocks -%}
+| {{ epic.id }} | {{ epic.title }} | {{ epic.status }} | {{ epic.priority }} | {{ epic.stories|length }} stories | {{ progress_bar }} {{ epic.completion_rate }}% |
+{% endfor %}
+
+---
+
+## 📋 Story 详情
+
+{% for epic in epics -%}
+### {{ epic.id }}: {{ epic.title }}
+{% for story_id in epic.stories -%}
+{% set story = stories[story_id] -%}
+{% if story -%}
+- **{{ story.id }}**: {{ story.title }} - {{ story.status }} ({{ story.story_points }} SP)
+{% endif -%}
+{% endfor -%}
+
+{% endfor -%}
+
+---
+
+## 📈 Story 统计
+
+| 状态 | 数量 | 占比 |
+|------|------|------|
+| ✅ COMPLETED | {{ statistics.completed_stories }} | {{ statistics.completion_rate }} |
+| 🚧 IN_PROGRESS | {{ statistics.in_progress_stories }} | - |
+| 📋 TODO | {{ statistics.total_stories - statistics.completed_stories - statistics.in_progress_stories }} | - |

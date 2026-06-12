@@ -36,7 +36,7 @@ def pytest_configure(config):
     print("⚠️  UAT 测试风险告知")
     print("="*80)
     print()
-    print("测试环境: K8s 生产集群 (https://127.0.0.10:6443)")
+    print("测试环境: K8s 集群 (https://cluster.example.internal:6443)")
     print("测试内容: 将在 K8s 集群上创建真实的 Pod 资源")
     print("测试 namespace: example-service、argo、argo-workflow、train-job")
     print()
@@ -49,7 +49,7 @@ def pytest_configure(config):
     print("  ✅ 测试失败时也会清理 Pod")
     print()
     print("建议:")
-    print("  🔧 确保当前连接的是生产集群（KUBECONFIG=/home/user/.kube/prod_gpu/config）")
+    print("  🔧 确保当前连接的是目标集群（KUBECONFIG=/path/to/kubeconfig）")
     print("  🧹 如需中断测试，按 Ctrl+C，Pod 会自动清理")
     print("="*80)
     print()
@@ -219,7 +219,7 @@ def k8s_client():
             """
             try:
                 # 查询所有GPU节点
-                nodes = self.v1.list_node(label_selector="example-org-worker-type=gpu")
+                nodes = self.v1.list_node(label_selector="worker-type=gpu")
 
                 # 按GPU类型分组，统计可用资源
                 gpu_type_stats = {}
@@ -321,7 +321,7 @@ def k8s_client():
 
             **⚠️ 风险告知**：
             - 此方法会在 K8s 集群上创建真实 Pod
-            - 生产集群: https://127.0.0.10:6443（生产环境）
+            - 目标集群: https://cluster.example.internal:6443（示例环境）
             - 建议在非生产namespace中验证（example-service、argo、train-job）
             - 测试失败时 Pod 会被自动清理
             - 默认使用 '{PROJECT_NAME}-uat' namespace（测试专用）
@@ -382,7 +382,7 @@ def k8s_client():
                     node_selector=node_selector or {},
                     tolerations=[
                         client.V1Toleration(
-                            key="example-org-worker-type",
+                            key="worker-type",
                             operator="Equal",
                             value="gpu",
                             effect="NoSchedule"

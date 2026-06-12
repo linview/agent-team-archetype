@@ -1,70 +1,129 @@
 # Changelog
 
-All notable changes to agent-team-archetype will be documented in this file.
+All notable changes to this project will be documented in this file.
 
-## [2.1.0] - 2026-06-03
-
-> 强化 `/pm` 为总入口角色，支持意图识别与动态路由；新增 `/ued` 前端交互设计角色；增强 `/qa` 测试分层定义并支持 E2E 测试；`/pm` 支持 FSM 管理 story 状态流转。
-
-项目地址：https://git.example.com/user/agent-team-archetype
-
-### 重大更新
-
-#### /pm — 意图识别与动态路由
-
-- 强化 `/pm` 作为团队总入口的角色，具备**意图识别**和**动态路由**能力
-- 用户只需描述需求，`/pm` 自动分派给合适的角色执行
-- 新增 FSM（有限状态机）管理 story 状态，提供清晰的进度定义和状态流转规则 (`references/story_status_fsm.md`)
-- 重构 story 状态更新工作流，支持更精细的任务生命周期管理 (`references/story_status_update_workflow.md`)
-
-#### /ued — 全新前端视觉交互角色
-
-- 新增 `/ued` 角色，负责前端视觉交互设计方案的开发
-- 内置完整的原型设计参考：聊天界面、仪表盘、数据可视化、表单、落地页、移动端等 6 种原型模板 (`examples/`)
-- 提供框架选型指南 (`references/framework-guide.md`)、原型设计方法论 (`references/prototype-guide.md`)、视觉设计规范 (`references/visual-design-guide.md`)
-- 包含交互流程 (`templates/interaction_flow.md`) 和线框图 (`templates/wireframe.md`) 模板
-- 集成 ECharts 生命周期 (`references/echarts-lifecycle.md`)、编码模式 (`references/encoding-patterns.md`) 等工程化参考
-
-#### /qa — 增强测试分层定义
-
-- 重构 `/qa` 技能，精简主文档，采用渐进式披露
-- 新增测试分层明确定义：UT / API / SIT / UAT / E2E，支持 **E2E 测试类型** (`references/testing_layer_definitions.md`)
-- 新增测试幂等性指南 (`references/test_idempotency.md`)、UT 覆盖率指南 (`references/ut_coverage_guide.md`)
-- 新增测试排障手册 (`references/troubleshooting.md`)
-
-### 其他改进
-
-- **/commit**: 优化 GitLab API 脚本和 MR 创建排障指南
-- **/dev**: 更新 git-workflow 脚本
-- **/sentinel**: 更新配置管理说明
-- **模板**: 统一 pm 模板占位符格式（epic、story、kanban、sprint 等）
-- **docs**: 移除 README.md 中过时的更新日志部分
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
-## [2.0.0] - 2026-04-29
+## [v2.1] - 2026-06-12
 
-### 重大变更
+### Summary
 
-- **去实现化重构**：转型为纯原型工程，移除所有业务逻辑实现，仅保留框架代码和接口定义
-- **技能产品化**：所有 Skill（`/arch`、`/dev`、`/qa`、`/devops`、`/commit`）完成去项目化、产品化改造
-- **Skill 重命名**：统一技能命名规范 — `architect` → `arch`、`developer` → `dev`、`scrum_master` → `pm`、`code-committer` → `commit`、`regular-checker` → `sentinel`
-- **AI-Native 开发指南**：创建 Guide Book v0.1.0-alpha，新增 Agent Team 协作原理可视化（协作流程图、时序图）
-- **spec-xchecker**：实验性规格校验工具，从 v3.0 迭代至 v4.0，符合 Claude Code 官方文档标准
+v2.1 是 v2.0（去实现化重构）之后的**技能生态增强版本**，核心变更包括：Codex Agent 多引擎 Skill 适配、全部 9 个 Skill 的产品化规范化重构、文档体系大幅增强、以及全面的隐私脱敏处理。
 
-### 架构
+### Added
 
-- 分层架构：Handler → Logic → DAO（接口化）→ Model
+- **Codex Agent Skill 适配层**（`.codex/skills/`，103 文件）
+  - 支持多版本 AI Agent（Claude Code + Codex）并行 Skill 适配
+  - 删除冗余 `CODEX.md`，功能已由 `.codex/skills/` 完整替代
+
+- **新增 UED 技能**（`.claude/skills/ued/`）
+  - 前端体验设计、组件开发、交互优化、原型生成
+  - 包含 6 个 HTML 原型示例（chat/dashboard/dataviz/form/landing/mobile）
+
+- **新增 spec-xchecker 技能**（`.claude/skills/spec-xchecker/`）
+  - Design ↔ Scrum ↔ Code ↔ Tests 四路交叉验证工具
+  - 实验性质技能，支持对齐一致性检查
+
+- **新增 sentinel 技能**（`.claude/skills/sentinel/`）
+  - 线上服务哨兵：健康检查、定期巡检、RCA、数据质量验证
+  - 含自动化巡检脚本和配置模板
+
+- **新增 refactor 技能**（`.claude/skills/refactor/`）
+  - 安全重构：逻辑不变前提下的代码结构优化、命名改进
+  - 包含代码坏味道识别和重构技法参考
+
+- **AI-Native Development Guide Book v0.1.0-alpha**
+  - 独立的 AI-Native 开发指南文档
+
+- **GUIDE.md 协作原理可视化章节**
+  - Agent Team 协作流程图、时序图、完整研发流程
+
+- **GUIDE.md & Guide Book FAQ 内容**
+  - GUIDE.md 插入 6 个 Part FAQ（20 条）
+  - Guide Book 插入 5 个 Part FAQ（16 条）
+  - 充实常见陷阱（4→6 条）
+
+- **k8s 部署目录占位**（`deploy/`）
+
+### Changed
+
+- **PM skill v14.1-exp**
+  - 扩展 Agent Team 至 9 人，新增领域描述和触发场景
+  - 新增多意图编排能力（动态路由、上下文传递）
+  - 增强 Story 状态 FSM 定义（8 状态完整转换矩阵）
+  - 重命名 scrum_master → pm，统一命名
+
+- **commit skill v2.2**
+  - 重命名 code-committer → commit
+  - 添加所有文件引用，充分利用技能资源
+  - 极致压缩版本章节
+
+- **dev skill v5.1**
+  - 整合 naming-conventions 到代码风格章节
+
+- **devops skill v2.0**
+  - 优化渐进式披露精准度
+
+- **arch skill v2.1**
+  - 整合 documentation-versioning 内容
+
+- **spec-xchecker v4.0**
+  - 完全符合 Claude Code 官方文档标准
+  - 规范化目录结构和渐进式披露
+
+- **GUIDE.md 重构为操作手册**
+  - 重构协作流程图和时序图的流程顺序
+  - 修复 Mermaid 图表渲染问题
+  - 统一 agent 命名规范
+
+### Fixed
+
+- **全面隐私脱敏处理**（4 轮迭代）
+  - 第 1 轮：移除组织特化信息（邮箱/域名/IP/密码/namespace）
+  - 第 2 轮：.claude/skills/ 下的隐私信息
+  - 第 3 轮：人名/邮箱/内部域名
+  - 第 4 轮：产品名/组织名/K8s 标签/IP/本地路径（深度脱敏）
+
+- 清除 pm2 残留引用
+- 删除废弃 scrum_master skill
+- 修正 Guide Book 中 claude-code 为 claude
+- 移除协作流程图中离散的 QA 节点
+
+### Removed
+
+- `CODEX.md` — 功能已由 `.codex/skills/` 替代
+- 废弃的 scrum_master skill — 已重命名为 pm
+- 项目特定和设计文档类型的 SKILL 文件
+
+### Stats
+
+| 指标 | 数值 |
+|------|------|
+| 提交数量 | 45 |
+| 时间跨度 | 2026-04-29 ~ 2026-06-12 |
+| 新增 Skill | ued / spec-xchecker / sentinel / refactor |
+| Skill 重构 | pm / commit / dev / devops / arch |
+| 脱敏迭代 | 4 轮 |
+
+---
+
+## [v2.0] - 2026-04-28
+
+### Changed
+
+- **去实现化重构**：移除所有业务逻辑实现，仅保留框架代码
+- 保留内容：目录结构、分层架构示例、DAO 接口定义、数据模型、测试骨架、设计文档、Docker/Helm 模板
+
+---
+
+## [v1.0] - 2026-02-04
+
+### Added
+
+- 初始版本：AI-native 项目原型工程 / 架构模板
+- 分层架构：Handler → Logic → DAO → Model
 - 技术栈：Go 1.24+ / go-zero / GORM / PostgreSQL / Kubernetes
 - 四层测试策略：UT / API / SIT / UAT
-- 部署模板：Docker Compose（本地开发）+ Helm Charts（K8s 部署）
-
----
-
-## [1.0.0] - 2026-02-04
-
-### 初始版本
-
-- Agent Team Archetype 框架 v1.0
-- 初始 Skill 定义：`architect`、`developer`、`qa`、`devops`、`scrum_master`
-- 基础项目结构：分层架构、部署模板、测试框架
+- DevOps：Docker / Kubernetes / Helm Charts / GitLab CI

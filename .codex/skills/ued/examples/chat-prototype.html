@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Prototype - Chat Interface</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, 'PingFang SC', 'Segoe UI', sans-serif;
+      background: #f0f2f5;
+      color: #050505;
+      height: 100vh;
+      display: flex;
+    }
+
+    /* Sidebar: conversation list */
+    .sidebar {
+      width: 320px;
+      background: white;
+      border-right: 1px solid #e4e6eb;
+      display: flex;
+      flex-direction: column;
+    }
+    .sidebar-header {
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #e4e6eb;
+    }
+    .sidebar-header h2 { font-size: 1.25rem; font-weight: 700; }
+    .sidebar-search {
+      margin: 8px 12px;
+      padding: 8px 12px;
+      background: #f0f2f5;
+      border-radius: 20px;
+      border: none;
+      font-size: 0.85rem;
+      width: calc(100% - 24px);
+    }
+    .sidebar-search:focus { outline: none; background: #e4e6eb; }
+    .conv-list { flex: 1; overflow-y: auto; }
+    .conv-item {
+      display: flex;
+      gap: 12px;
+      padding: 12px 16px;
+      cursor: pointer;
+      transition: background 0.15s;
+      border-radius: 8px;
+      margin: 2px 8px;
+    }
+    .conv-item:hover { background: #f0f2f5; }
+    .conv-item.active { background: #e7f3ff; }
+    .conv-avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.3rem;
+      flex-shrink: 0;
+    }
+    .conv-info { flex: 1; min-width: 0; }
+    .conv-name { font-size: 0.9rem; font-weight: 600; }
+    .conv-preview { font-size: 0.8rem; color: #65676b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+    .conv-meta { text-align: right; flex-shrink: 0; }
+    .conv-time { font-size: 0.7rem; color: #65676b; }
+    .conv-unread {
+      display: inline-block;
+      background: #1a77f2;
+      color: white;
+      font-size: 0.65rem;
+      font-weight: 700;
+      min-width: 18px;
+      height: 18px;
+      line-height: 18px;
+      text-align: center;
+      border-radius: 9px;
+      margin-top: 4px;
+      padding: 0 5px;
+    }
+
+    /* Main chat area */
+    .chat-main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: #f0f2f5;
+    }
+
+    /* Chat header */
+    .chat-header {
+      padding: 12px 20px;
+      background: white;
+      border-bottom: 1px solid #e4e6eb;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .chat-header-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: #e7f3ff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+    }
+    .chat-header-info h3 { font-size: 0.95rem; font-weight: 600; }
+    .chat-header-info p { font-size: 0.75rem; color: #65676b; }
+    .chat-header-actions { margin-left: auto; display: flex; gap: 16px; color: #65676b; font-size: 1.1rem; cursor: pointer; }
+
+    /* Messages */
+    .messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .msg-row { display: flex; gap: 8px; max-width: 65%; animation: msgIn 0.25s ease; }
+    .msg-row.self { align-self: flex-end; flex-direction: row-reverse; }
+    @keyframes msgIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+    .msg-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.85rem;
+      flex-shrink: 0;
+      align-self: flex-end;
+    }
+    .msg-bubble {
+      padding: 10px 14px;
+      border-radius: 18px;
+      font-size: 0.9rem;
+      line-height: 1.5;
+      position: relative;
+    }
+    .msg-bubble.other {
+      background: white;
+      border-bottom-left-radius: 4px;
+    }
+    .msg-bubble.self {
+      background: #1a77f2;
+      color: white;
+      border-bottom-right-radius: 4px;
+    }
+    .msg-time {
+      font-size: 0.65rem;
+      color: #65676b;
+      margin-top: 4px;
+    }
+    .msg-row.self .msg-time { text-align: right; color: rgba(255,255,255,0.6); }
+
+    /* Typing indicator */
+    .typing { display: flex; gap: 4px; padding: 10px 14px; }
+    .typing-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #bcc0c4;
+      animation: typingBounce 1.4s infinite;
+    }
+    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes typingBounce {
+      0%, 60%, 100% { transform: translateY(0); }
+      30% { transform: translateY(-6px); }
+    }
+
+    /* Input area */
+    .input-area {
+      padding: 12px 20px;
+      background: white;
+      border-top: 1px solid #e4e6eb;
+      display: flex;
+      align-items: flex-end;
+      gap: 12px;
+    }
+    .input-tools { display: flex; gap: 8px; color: #65676b; font-size: 1.2rem; padding-bottom: 6px; }
+    .msg-input {
+      flex: 1;
+      padding: 10px 14px;
+      background: #f0f2f5;
+      border-radius: 20px;
+      border: none;
+      font-size: 0.9rem;
+      font-family: inherit;
+      resize: none;
+      max-height: 120px;
+      line-height: 1.4;
+    }
+    .msg-input:focus { outline: none; background: #e4e6eb; }
+    .send-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: #1a77f2;
+      color: white;
+      border: none;
+      font-size: 1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+    }
+    .send-btn:hover { background: #1565d8; }
+    .send-btn:disabled { background: #e4e6eb; color: #bcc0c4; cursor: default; }
+  </style>
+</head>
+<body>
+
+<div class="sidebar">
+  <div class="sidebar-header">
+    <h2>消息</h2>
+    <span style="font-size:1.2rem;cursor:pointer;color:#65676b">✎</span>
+  </div>
+  <input class="sidebar-search" type="text" placeholder="🔍 搜索对话...">
+  <div class="conv-list">
+    <div class="conv-item active">
+      <div class="conv-avatar" style="background:#e7f3ff">🤖</div>
+      <div class="conv-info"><div class="conv-name">Dev Loop Bot</div><div class="conv-preview">Pipeline #247 构建成功 ✓</div></div>
+      <div class="conv-meta"><div class="conv-time">14:31</div><div class="conv-unread">3</div></div>
+    </div>
+    <div class="conv-item">
+      <div class="conv-avatar" style="background:#dcfce7">👨‍💻</div>
+      <div class="conv-info"><div class="conv-name">前端团队</div><div class="conv-preview">张三: Dashboard 的 Sankey 图修好了</div></div>
+      <div class="conv-meta"><div class="conv-time">13:45</div></div>
+    </div>
+    <div class="conv-item">
+      <div class="conv-avatar" style="background:#fef3c7">🔧</div>
+      <div class="conv-info"><div class="conv-name">DevOps 通知</div><div class="conv-preview">[ALERT] CPU 使用率超过 80%</div></div>
+      <div class="conv-meta"><div class="conv-time">12:20</div><div class="conv-unread">1</div></div>
+    </div>
+    <div class="conv-item">
+      <div class="conv-avatar" style="background:#fee2e2">👩‍💼</div>
+      <div class="conv-info"><div class="conv-name">产品组</div><div class="conv-preview">李四: 需求评审下午 3 点开始</div></div>
+      <div class="conv-meta"><div class="conv-time">昨天</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="chat-main">
+  <div class="chat-header">
+    <div class="chat-header-avatar">🤖</div>
+    <div class="chat-header-info"><h3>Dev Loop Bot</h3><p>在线 · 自动通知</p></div>
+    <div class="chat-header-actions"><span>📞</span><span>📹</span><span>ℹ️</span></div>
+  </div>
+
+  <div class="messages" id="messages">
+    <div class="msg-row">
+      <div class="msg-avatar" style="background:#e7f3ff">🤖</div>
+      <div>
+        <div class="msg-bubble other">Pipeline #244 构建完成 ✅<br>分支: feat/user-auth<br>耗时: 3m 21s</div>
+        <div class="msg-time">14:15</div>
+      </div>
+    </div>
+    <div class="msg-row self">
+      <div>
+        <div class="msg-bubble self">查看失败日志</div>
+        <div class="msg-time">14:16</div>
+      </div>
+    </div>
+    <div class="msg-row">
+      <div class="msg-avatar" style="background:#e7f3ff">🤖</div>
+      <div>
+        <div class="msg-bubble other">⚠️ Pipeline #246 构建失败<br>分支: fix/pagination<br>错误: 测试用例 assertion failed<br><br>失败用例: TestQueryRecentWorkItems</div>
+        <div class="msg-time">14:28</div>
+      </div>
+    </div>
+    <div class="msg-row">
+      <div class="msg-avatar" style="background:#e7f3ff">🤖</div>
+      <div>
+        <div class="msg-bubble other">✅ Pipeline #247 构建成功<br>分支: feat/dashboard-redesign<br>耗时: 2m 58s</div>
+        <div class="msg-time">14:31</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="input-area">
+    <div class="input-tools"><span>📎</span><span>🖼️</span></div>
+    <textarea class="msg-input" id="msgInput" rows="1" placeholder="输入消息..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();send()}"></textarea>
+    <button class="send-btn" id="sendBtn" onclick="send()" disabled>➤</button>
+  </div>
+</div>
+
+<script>
+const input = document.getElementById('msgInput');
+const sendBtn = document.getElementById('sendBtn');
+const messages = document.getElementById('messages');
+
+input.addEventListener('input', () => {
+  sendBtn.disabled = !input.value.trim();
+  input.style.height = 'auto';
+  input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+});
+
+function send() {
+  const text = input.value.trim();
+  if (!text) return;
+
+  // User message
+  const row = document.createElement('div');
+  row.className = 'msg-row self';
+  row.innerHTML = `<div><div class="msg-bubble self">${text}</div><div class="msg-time">刚刚</div></div>`;
+  messages.appendChild(row);
+  input.value = '';
+  input.style.height = 'auto';
+  sendBtn.disabled = true;
+  messages.scrollTop = messages.scrollHeight;
+
+  // Bot typing indicator
+  const typing = document.createElement('div');
+  typing.className = 'msg-row';
+  typing.innerHTML = `<div class="msg-avatar" style="background:#e7f3ff">🤖</div><div class="typing"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>`;
+  messages.appendChild(typing);
+  messages.scrollTop = messages.scrollHeight;
+
+  // Bot reply
+  setTimeout(() => {
+    typing.remove();
+    const reply = document.createElement('div');
+    reply.className = 'msg-row';
+    reply.innerHTML = `<div class="msg-avatar" style="background:#e7f3ff">🤖</div><div><div class="msg-bubble other">收到！正在处理你的请求...</div><div class="msg-time">刚刚</div></div>`;
+    messages.appendChild(reply);
+    messages.scrollTop = messages.scrollHeight;
+  }, 1500);
+}
+</script>
+</body>
+</html>

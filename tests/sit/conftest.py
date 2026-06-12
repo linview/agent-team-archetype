@@ -88,13 +88,13 @@ def k8s_client():
                 "SIT 测试需要连接到 K8s 集群，必须显式指定 kubeconfig 文件\n\n"
                 "🔒 安全原则：强制显式指定，防止误连接生产集群\n\n"
                 "请使用以下命令之一：\n"
-                "  export KUBECONFIG=/home/user/.kube/test/config\n"
-                "  KUBECONFIG=/home/user/.kube/test/config pytest tests/sit/\n\n"
+                "  export KUBECONFIG=/path/to/test-kubeconfig\n"
+                "  KUBECONFIG=/path/to/test-kubeconfig pytest tests/sit/\n\n"
                 "📍 测试环境 kubeconfig 路径：\n"
-                "  ✅ 测试环境: /home/user/.kube/test/config (推荐)\n"
-                "  ❌ 生产环境: /home/user/.kube/prod_gpu/config (严禁使用!)\n\n"
+                "  ✅ 测试环境: /path/to/test-kubeconfig (推荐)\n"
+                "  ❌ 生产环境: /path/to/prod-kubeconfig (严禁使用!)\n\n"
                 "💡 提示：在 ~/.bashrc 或 ~/.zshrc 中添加别名：\n"
-                "  alias test-kubeconfig='export KUBECONFIG=/home/user/.kube/test/config'"
+                "  alias test-kubeconfig='export KUBECONFIG=/path/to/test-kubeconfig'"
             )
 
         # 验证文件存在
@@ -108,7 +108,7 @@ def k8s_client():
                         f"   错误路径: {kubeconfig_path}\n"
                         f"   正确路径: {fixed_path}\n\n"
                         f"💡 修复命令：\n"
-                        f"  export KUBECONFIG=/home/user/.kube/test/config"
+                        f"  export KUBECONFIG=/path/to/test-kubeconfig"
                     )
 
             raise FileNotFoundError(
@@ -169,15 +169,15 @@ def k8s_client():
 
                     # ✅ 构建 tolerations（容忍 GPU 节点 Taint）
                     # 覆盖集群中所有 GPU Taint 类型：
-                    # - example-org-worker-type=gpu:NoSchedule (52个节点)
-                    # - example-org-worker-type/ide=gpu:NoSchedule (9个节点)
-                    # - example-org-worker-type/drs=gpu:NoSchedule (3个节点)
+                    # - worker-type=gpu:NoSchedule (52个节点)
+                    # - worker-type/ide=gpu:NoSchedule (9个节点)
+                    # - worker-type/drs=gpu:NoSchedule (3个节点)
                     tolerations = None
                     if gpu_count > 0:
-                        # 使用 Exists operator 匹配所有 example-org-worker-type=* 的 Taint
+                        # 使用 Exists operator 匹配所有 worker-type=* 的 Taint
                         tolerations = [
                             client.V1Toleration(
-                                key="example-org-worker-type",
+                                key="worker-type",
                                 operator="Exists",
                                 effect="NoSchedule"
                             )
@@ -1257,7 +1257,7 @@ def abort_pod(k8s_client):
             print(f"   ⏳ 等待 {BUSINESS_SHORT}记录创建...")
             import psycopg2
             conn = psycopg2.connect(
-                host="127.0.0.1",
+                host="db.example.internal",
                 port=5433,
                 dbname="event_db-dev",
                 user="postgres",

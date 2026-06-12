@@ -5,7 +5,7 @@ description: "创建 Go-Zero 项目脚手架，配置多环境文件结构，建
 status: "COMPLETED"
 priority: "P0"
 layer: "INFRA"
-owner: "user@example.com"
+owner: "dev1@example.com"
 start_date: "2026-01-31"
 target_date: "2026-02-04"
 stories:
@@ -142,7 +142,7 @@ DatabaseConf:
 
 # config-prod.yaml（生产环境覆盖）
 DatabaseConf:
-  Host: 127.0.0.10
+  Host: api.example.internal
   Port: 31532
 ```
 
@@ -246,7 +246,7 @@ STORY-1-02（配置） ←→ STORY-1-03（构建系统）
 ### 7.1 参考文档
 
 - [Go-Zero 官方文档](https://go-zero.dev/)
-- [example-service 项目](https://git.example.com/example-org/example-service)
+- [sample_service 项目](https://git.example.com/example-org/sample_service)
 - [CLAUDE.md](../CLAUDE.md)
 
 ### 7.2 设计文档链接

@@ -62,7 +62,7 @@ RedisConf:
 # 说明：
 #   - K8sApiServerUrl: 生产环境 K8S API Server 地址
 #   - K8sBearerTokenPath: InitContainer 自动获取的 Token 路径
-#   - 监听的 Namespace：example-service, argo, example-org-ray, train-job
+#   - 监听的 Namespace：example-service, argo, ray-jobs, train-job
 # ============================================================
 Kubeconfig:
   K8sKubeconfigPath: ""
@@ -74,7 +74,7 @@ Kubeconfig:
   # 监听的 Namespace（Pod 来源识别）
   DevPodNamespace: example-service
   ArgoNamespace: argo
-  RayJobNamespace: example-org-ray
+  RayJobNamespace: ray-jobs
   TrainJobNamespace: train-job  # ✅ Epic-12: TrainJob 支持
 
 # ============================================================

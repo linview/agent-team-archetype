@@ -56,7 +56,7 @@ etc/helm/                       # K8s 部署配置（参见 etc/helm/{PROJECT_NA
 **config.yaml**:
 ```yaml
 Kubeconfig:
-  K8sApiServerUrl: "https://127.0.0.1:6443"   # API Server 地址
+  K8sApiServerUrl: "https://k8s-api.example.internal:6443"   # API Server 地址
   K8sBearerToken: "eyJhbGci..."                  # Bearer Token
   K8sCaFilePath: "./etc/config/ca.crt"           # CA 证书路径
   DevPodNamespace: "example-service"                      # 监听的命名空间
@@ -148,7 +148,7 @@ kubectl config view --minify -o jsonpath='{.clusters[].cluster.server}'
 # 1. 获取 API Server URL
 API_SERVER=$(kubectl config view --minify -o jsonpath='{.clusters[].cluster.server}')
 echo "API Server: $API_SERVER"
-# 输出: https://127.0.0.1:6443
+# 输出: https://k8s-api.example.internal:6443
 
 # 2. 获取 Bearer Token
 BEARER_TOKEN=$(cat etc/config/bearer-token.txt)
@@ -231,7 +231,7 @@ cat etc/config/bearer-token.txt | awk -F. '{print $2}' | base64 -d | jq .
 # 使用 curl 测试 API Server 连接
 curl -k --cacert etc/ca.crt \
   -H "Authorization: Bearer $(cat etc/config/bearer-token.txt)" \
-  https://127.0.0.1:6443/api/v1/namespaces/example-service/pods \
+  https://k8s-api.example.internal:6443/api/v1/namespaces/example-service/pods \
   | jq '.items[] | {name: .metadata.name, phase: .status.phase}'
 ```
 

@@ -4,7 +4,7 @@
 PROJECT_NAME := resource-meter
 BINARY_NAME := $(PROJECT_NAME)_api
 VERSION := V0.1
-DOCKER_REGISTRY := docker.example.com
+DOCKER_REGISTRY := registry.example.com
 DOCKER_IMAGE := $(DOCKER_REGISTRY)/example-org/$(PROJECT_NAME)
 
 # 目录定义
