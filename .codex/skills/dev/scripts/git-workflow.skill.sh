@@ -47,9 +47,9 @@ fi
 # 自动检测项目名称
 PROJECT_NAME=$(basename "$PROJ_ROOT")
 
-# Worktree 根目录（与主仓库同级）
+# Worktree 根目录（项目根目录下的 .worktrees/，须已在 .gitignore）
 # 可通过环境变量 WORKTREE_ROOT_OVERRIDE 覆盖
-WORKTREE_ROOT=${WORKTREE_ROOT_OVERRIDE:-$(dirname "$PROJ_ROOT")/${PROJECT_NAME}-worktrees}
+WORKTREE_ROOT=${WORKTREE_ROOT_OVERRIDE:-$PROJ_ROOT/.worktrees}
 
 # 调试信息（可通过 GIT_WORKFLOW_DEBUG=1 启用）
 if [ "$GIT_WORKFLOW_DEBUG" = "1" ]; then
@@ -117,7 +117,7 @@ git-workflow.feature.start() {
     echo "示例:"
     echo "  git-workflow.feature.start story-06-01 \"pod handler\""
     echo "  → 创建分支: feat/story-06-01-pod-handler"
-    echo "  → 创建 worktree: ../${PROJECT_NAME}-worktrees/story-06-01-pod-handler/"
+    echo "  → 创建 worktree: .worktrees/story-06-01-pod-handler/"
     exit 1
   fi
 
@@ -370,7 +370,7 @@ Worktree 管理:
   git-workflow.feature.start story-06-01 "pod handler"
 
   # 在 worktree 中开发
-  cd ../project-name-worktrees/story-06-01-pod-handler
+  cd .worktrees/story-06-01-pod-handler
   # ... 开发代码 ...
   git add .
   git commit -m "feat: implement pod handler"
@@ -381,8 +381,7 @@ Worktree 管理:
   # 提交 MR
   git-workflow.feature.submit
 
-  # MR 合并后清理
-  cd ../project-name
+  # MR 合并后清理（脚本内部会自动切换到主仓库操作）
   git-workflow.feature.finish story-06-01
 
 特性:

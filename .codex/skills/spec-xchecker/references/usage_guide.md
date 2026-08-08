@@ -17,16 +17,16 @@
 cd /path/to/project
 
 # 检查指定 Story
-python3 .codex/skills/spec-xchecker/scripts/spec-xchecker.py --story 15-23 --mode medium
+python3 .codex/skills/spec-xchecker/spec-xchecker.py --story 15-23 --mode medium
 
 # 自动检测 Story ID
-python3 .codex/skills/spec-xchecker/scripts/spec-xchecker.py --auto-mode --mode medium
+python3 .codex/skills/spec-xchecker/spec-xchecker.py --auto-mode --mode medium
 
 # 指定输出格式
-python3 .codex/skills/spec-xchecker/scripts/spec-xchecker.py --story 15-23 --mode medium --format json
+python3 .codex/skills/spec-xchecker/spec-xchecker.py --story 15-23 --mode medium --format json
 
 # 只检查特定层
-python3 .codex/skills/spec-xchecker/scripts/spec-xchecker.py --story 15-23 --mode medium --scope code,test
+python3 .codex/skills/spec-xchecker/spec-xchecker.py --story 15-23 --mode medium --scope code,test
 ```
 
 ### 命令行参数
@@ -45,8 +45,8 @@ python3 .codex/skills/spec-xchecker/scripts/spec-xchecker.py --story 15-23 --mod
 ## 通过 Skill 调用（推荐）
 
 ```bash
-# Codex 可通过 $spec-xchecker 触发此 skill
-$spec-xchecker --story 15-23 --mode medium
+# Codex 会自动调用 spec-xchecker.py
+/spec-xchecker --story 15-23 --mode medium
 ```
 
 **优势**：
@@ -63,12 +63,12 @@ $spec-xchecker --story 15-23 --mode medium
 
 **功能**：
 - 自动检测到新的 git commit
-- 启动本地检查脚本执行检查
+- 启动独立 CC Session 执行检查
 - 报告保存到 `/tmp/xchecker/{timestamp}/report.json`
 
 **配置**：
 ```bash
-# 在 Codex hooks 配置中注册触发脚本
+# 在 ~/.codex/hooks/stop/ 目录创建触发脚本
 # .codex/skills/spec-xchecker/trigger_check.sh
 ```
 
@@ -80,7 +80,7 @@ $spec-xchecker --story 15-23 --mode medium
 
 **配置**：
 ```bash
-# 在 Codex hooks 配置中注册通知脚本
+# 在 ~/.codex/hooks/sessionstart/ 目录创建通知脚本
 # .codex/skills/spec-xchecker/notify_pending_reports.sh
 ```
 

@@ -2,7 +2,7 @@
 # ============================================================
 # Regular Checker - 定期巡检执行脚本
 # ============================================================
-# 功能：执行 Resource Meter 服务的定期巡检
+# 功能：执行 Service Monitor 服务的定期巡检
 # 用法：./run_inspection.sh <LEVEL> <ENV>
 # 示例：./run_inspection.sh standard prod
 # ============================================================
@@ -33,7 +33,7 @@ find "$REPORT_DIR" -name "inspection_*.md" -mtime +7 -delete 2>/dev/null || true
 # ============================================================
 
 echo "=========================================="
-echo "Resource Meter 定期巡检"
+echo "Service Monitor 定期巡检"
 echo "=========================================="
 echo "环境: $ENV"
 echo "级别: $LEVEL"
@@ -41,21 +41,21 @@ echo "时间: $(date)"
 echo ""
 
 # 检查环境变量
-if [[ -z "$RESOURCE_METER_API_URL" ]]; then
-    echo "❌ 错误：环境变量 RESOURCE_METER_API_URL 未设置"
+if [[ -z "$SERVICE_API_URL" ]]; then
+    echo "❌ 错误：环境变量 SERVICE_API_URL 未设置"
     echo ""
     echo "请先设置环境变量："
-    echo "  export RESOURCE_METER_API_URL=\"http://localhost:8082/api/v1\""
-    echo "  export DB_HOST=\"127.0.0.10\""
+    echo "  export SERVICE_API_URL=\"http://localhost:8082/api/v1\""
+    echo "  export DB_HOST=\"<YOUR_DB_HOST>\""
     echo "  export DB_PORT=\"32432\""
-    echo "  export DB_NAME=\"event_db\""
+    echo "  export DB_NAME=\"app_db\""
     echo "  export DB_USER=\"postgres\""
-    echo "  export DB_PASSWORD=\"post@1234.com\""
+    echo "  export DB_PASSWORD=\"your-password\""
     exit 1
 fi
 
-echo "📍 API URL: $RESOURCE_METER_API_URL"
-echo "📍 数据库: ${DB_HOST:-localhost}:${DB_PORT:-5433}/${DB_NAME:-event_db-dev}"
+echo "📍 API URL: $SERVICE_API_URL"
+echo "📍 数据库: ${DB_HOST:-localhost}:${DB_PORT:-5433}/${DB_NAME:-app_db-dev}"
 
 # 检查 KUBECONFIG 文件是否存在（用于降级判断）
 # ⚠️ 支持通过 KUBECONFIG="DISABLED" 禁用 K8s 测试
@@ -165,8 +165,8 @@ if [[ -f "$JUNIT_XML" ]]; then
         "$REPORT_FILE" \
         "$ENV" \
         "$LEVEL" \
-        "$RESOURCE_METER_API_URL" \
-        "${DB_HOST:-localhost}:${DB_PORT:-5433}/${DB_NAME:-event_db-dev}" \
+        "$SERVICE_API_URL" \
+        "${DB_HOST:-localhost}:${DB_PORT:-5433}/${DB_NAME:-app_db-dev}" \
         "$DURATION"
 
     # 清理 JUnit XML 文件
@@ -181,7 +181,7 @@ if [[ -f "$JUNIT_XML" ]]; then
 else
     echo "⚠️  警告: JUnit XML 文件未找到，生成简化报告"
     cat > "$REPORT_FILE" <<EOF
-# Resource Meter 定期巡检报告
+# Service Monitor 定期巡检报告
 
 **环境**: $ENV
 **级别**: $LEVEL
@@ -191,8 +191,8 @@ else
 
 ## 环境信息
 
-- **API URL**: $RESOURCE_METER_API_URL
-- **数据库**: ${DB_HOST:-localhost}:${DB_PORT:-5433}/${DB_NAME:-event_db-dev}
+- **API URL**: $SERVICE_API_URL
+- **数据库**: ${DB_HOST:-localhost}:${DB_PORT:-5433}/${DB_NAME:-app_db-dev}
 
 ## ⚠️ 注意
 

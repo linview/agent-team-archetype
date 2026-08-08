@@ -29,12 +29,12 @@ def generate_markdown_report(results, output_path):
 
 **Story 类型**: {strategy.get('story_type', 'Unknown')}
 **检测到的 AC 类型**: {', '.join(strategy.get('detected_ac_types', []))}
-**置信度**: {strategy.get('confidence', 0.0):.1%}
+**置信度**: {strategy.get('confidence', 0.0):.1f}%
 
 **策略说明**: {strategy.get('reasoning', '无')}
 
-**执行的检查项** ({len(strategy.get('checks', []))} 个):
-{chr(10).join(f"- {check}" for check in strategy.get('checks', []))}
+**执行的检查项** ({len(strategy.get('final_checks', []))} 个):
+{chr(10).join(f"- {check}" for check in strategy.get('final_checks', []))}
 
 ---
 

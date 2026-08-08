@@ -203,10 +203,15 @@ def generate_metadata_json(project_root: Path) -> Dict[str, Any]:
     # 扫描 Story 文件
     stories = scan_story_files(story_dir)
 
-    # 生成统计数据
+    # 生成统计数据(FSM 8 状态全分桶,避免 TESTING/BLOCKED 被模板兜底减法错归 TODO)
     total_stories = len(stories)
     completed_stories = sum(1 for s in stories.values() if s["status"] == "COMPLETED")
     in_progress_stories = sum(1 for s in stories.values() if s["status"] == "IN_PROGRESS")
+    testing_stories = sum(1 for s in stories.values() if s["status"] == "TESTING")
+    blocked_stories = sum(1 for s in stories.values() if s["status"] == "BLOCKED")
+    deferred_stories = sum(1 for s in stories.values() if s["status"] == "DEFERRED")
+    cancelled_stories = sum(1 for s in stories.values() if s["status"] == "CANCELLED")
+    todo_stories = sum(1 for s in stories.values() if s["status"] == "TODO")
 
     # 生成 metadata.json（方案B：仅状态摘要）
     metadata = {
@@ -217,6 +222,11 @@ def generate_metadata_json(project_root: Path) -> Dict[str, Any]:
             "total_stories": total_stories,
             "completed_stories": completed_stories,
             "in_progress_stories": in_progress_stories,
+            "testing_stories": testing_stories,
+            "blocked_stories": blocked_stories,
+            "deferred_stories": deferred_stories,
+            "cancelled_stories": cancelled_stories,
+            "todo_stories": todo_stories,
             "completion_rate": f"{completed_stories * 100 / total_stories:.1f}%" if total_stories > 0 else "0%",
         },
         "epics": epics,

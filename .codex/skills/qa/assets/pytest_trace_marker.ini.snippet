@@ -1,0 +1,9 @@
+# @trace marker 注册片段
+#
+# 贴进项目 pytest.ini 的 [pytest] markers = 块(与 sit/uat/k8s 等同处,单源可见)。
+# 配合 --strict-markers 使用,未注册会报 PytestUnknownMarkWarning。
+#
+# 完整用法见 .codex/skills/qa/references/test_traceability.md
+# 框架代码见 .codex/skills/qa/assets/trace_framework.py
+
+trace: 主追溯(定位符 story/epic/endpoint + 版本化源锚 design)。一测一主功能锚;详见 qa/references/test_traceability.md

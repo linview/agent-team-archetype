@@ -13,8 +13,8 @@ get_memory_dir() {
     local project_dir="${1:-${CODEX_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-$(pwd)}}}"
 
     # 将项目路径转换为 Codex memory 目录路径
-    # /home/user/Proj/example/{PROJECT_NAME}
-    # → ~/.codex/projects/-home-user-Proj-example-{PROJECT_NAME}/memory
+    # /home/user/Proj/{PROJECT_NAME}
+    # → ~/.codex/projects/-home-user-Proj-{PROJECT_NAME}/memory
 
     # 去掉开头的 /
     local encoded_path="${project_dir#/}"

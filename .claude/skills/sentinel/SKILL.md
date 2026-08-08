@@ -122,10 +122,10 @@ psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME
 ### API 请求失败
 ```bash
 # 检查 API URL
-echo $RESOURCE_METER_API_URL
+echo $SERVICE_API_URL
 
 # 手动测试 API
-curl $RESOURCE_METER_API_URL/healthz
+curl $SERVICE_API_URL/healthz
 ```
 
 ## GitLab CI 集成
@@ -154,8 +154,8 @@ curl $RESOURCE_METER_API_URL/healthz
 # 在项目根目录创建 .env.skill
 cat > .env.skill << 'EOF'
 # Sentinel 配置 - 测试环境
-export TEST_API_URL="http://127.0.0.1:30082/api/v1"
-export TEST_DB_HOST="127.0.0.1"
+export TEST_API_URL="http://<YOUR_TEST_API_HOST>:<PORT>/api/v1"
+export TEST_DB_HOST="<YOUR_TEST_DB_HOST>"
 export TEST_DB_PORT="32032"
 export TEST_DB_NAME="app_db"
 export TEST_DB_USER="postgres"
@@ -163,8 +163,8 @@ export TEST_DB_PASSWORD="your-password"
 export TEST_KUBECONFIG="/path/to/kubeconfig"
 
 # Sentinel 配置 - 生产环境
-export PROD_API_URL="http://127.0.0.1:31076/api/v1"
-export PROD_DB_HOST="127.0.0.1"
+export PROD_API_URL="http://<YOUR_PROD_API_HOST>:<PORT>/api/v1"
+export PROD_DB_HOST="<YOUR_PROD_DB_HOST>"
 export PROD_DB_PORT="32032"
 export PROD_DB_NAME="app_db"
 export PROD_DB_USER="postgres"

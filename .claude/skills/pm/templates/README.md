@@ -36,7 +36,7 @@
 **格式**：`epic-{序号}-{名称}.md`
 
 **示例**：
-- `epic-1-example-service-lifecycle-management.md`
+- `epic-1-service-lifecycle-management.md`
 - `epic-15-data-layer-optimization-v4.1.md`
 
 **规则**：
@@ -54,7 +54,7 @@
 **格式**：`story-{epic序号}-{story序号:02d}-{简短描述}.md`
 
 **示例**：
-- `story-1-01-example-service-state-machine.md`
+- `story-1-01-service-state-machine.md`
 - `story-8-07-k8s-informer-factory.md`
 
 **规则**：

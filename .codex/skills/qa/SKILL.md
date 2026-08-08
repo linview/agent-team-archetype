@@ -3,7 +3,7 @@ name: "qa"
 description: "QA 工作技能 — 测试分层架构、UT/API/SIT/E2E/UAT 测试、交叉验证策略、测试数据管理、测试报告管理。当用户提到测试、QA、质量保证、回归测试、单元测试、集成测试、验收测试、测试覆盖率、pytest、go test、E2E、Playwright、monkey test、fuzz test、RPC 测试、测试用例设计、TDD、测试框架、测试策略审查、问题排查、测试环境、测试数据、SIT 交叉验证、或需要设计/执行/增强测试策略时，必须使用此技能。确保所有测试活动遵循分层架构和业务正确性验证原则。"
 metadata:
   original-skill: "qa"
-  version: "7.1"
+  version: "7.2"
 ---
 
 # QA 工作技能
@@ -191,9 +191,15 @@ assert all(name.strip() for name in commit_names), "commit 名称不应为空"
 
 ### 设计文档是测试用例的唯一真实来源
 
-1. **API 测试用例**必须基于 API 元数据文件
-2. **SIT 测试用例**必须基于设计文档
-3. **UAT 测试用例**必须基于 PRD 文档
+| 层 | 唯一来源 | 反标载体（`@trace`） |
+|---|---|---|
+| UT | 代码符号 | **不适用 `@trace`**(UT 真实来源=代码符号;追溯交 spec-xchecker CT 层 symbol↔test_) |
+| API | API 元数据文件 | `endpoint` + `design="api_design_vX.Y#<章节>"` |
+| SIT | 设计文档 | `story` + `design="service_layer_architecture_vX.Y#<章节>"` |
+| E2E | 用户旅程 / Epic | `epic`(Epic 即 PRD 源锚) |
+| UAT | **PRD 文档 / Epic** | `epic`(保持 PRD@Epic 粒度) |
+
+> 反标不止是"写下来",而是要让测试集随设计演进**新陈代谢**:见下方「分层用例 review」节与 [test_traceability.md](references/test_traceability.md)。
 
 ### 边界值与等价类划分
 
@@ -351,6 +357,40 @@ mv test_reports/*report*.html test_reports/archive/
 
 ---
 
+## 🔄 分层用例 review（设计↔测试漂移检测）⭐
+
+> 用例集要随设计迭代**新陈代谢**:测试用 `@trace` marker 记录"创建时对应的 design 版本";设计演进时,**漂移检测器**自动暴露过期用例,由 review 决定 update/retire/add。
+
+### `@trace` marker（两维度）
+
+```python
+@pytest.mark.trace(
+    story="STORY-6-02", ac="SIT",
+    design="service_layer_architecture_v4.2#查询路由策略"  # 版本化源锚 = 历史快照
+)
+```
+
+- **定位符**（空间·查阅）:`story`/`epic`/`endpoint` 三选一 —— "**一测一主功能锚**"(约束功能维度,不约束 AC 层维度)。
+- **版本化源锚**（时间·漂移）:`design="<doc>_vX.Y#<真实章节>"`,是**历史快照**(不随设计自动更新)—— pin 版本与当前版本之差即漂移信号。
+
+### 漂移检测（定期分层 review 的固定步骤）
+
+```bash
+python .codex/skills/qa/scripts/trace_drift.py
+# → test_reports/trace_drift_report.md(纯静态,不开 pytest、不连 PG/K8s)
+```
+
+| 态 | 触发 | review 动作 |
+|---|---|---|
+| ✅ 同步 | pin == 当前 且章节仍在 | 无需动作 |
+| ⚠️ 版本漂移 | pin < 当前(design 已演进) | 复核内容 → UPDATE / RETIRE |
+| ⚠️ 章节漂移 | 章节 重排/改名/删除 | 重对齐锚 → UPDATE |
+| 🔴 悬空 | doc 族消失 或 story CANCELLED | RETIRE |
+
+> 框架代码(marker 工厂 + 收集期校验 hook)见 [assets/](assets/);完整方法论(时态论证、层↔锚对角映射、非对角测试规则、能力边界)见 [test_traceability.md](references/test_traceability.md)。
+
+---
+
 ## 测试流程（通用模板）
 
 ### Phase 1: UT 回归
@@ -396,9 +436,17 @@ cd backend && go test -coverprofile=coverage.out ./...
 ### Reference 文档（按需加载）
 
 - **[testing_layer_definitions.md](references/testing_layer_definitions.md)** — ⭐ UT/API/SIT/E2E/UAT 标准定义、SIT 交叉验证实战案例
+- **[test_traceability.md](references/test_traceability.md)** — ⭐ 测试可追溯性与设计漂移检测(两维度模型、层↔锚对角映射、4 态检测、能力边界)
 - **[test_idempotency.md](references/test_idempotency.md)** — 测试幂等性四阶段策略、数据准备原则
 - **[ut_coverage_guide.md](references/ut_coverage_guide.md)** — UT 覆盖率分层统计、行业对标、报告模板
 - **[troubleshooting.md](references/troubleshooting.md)** — 问题排查方法论、环境一致性、重构测试流程
+
+### 可复用框架代码（`assets/` + `scripts/`）
+
+- **[assets/trace_framework.py](assets/trace_framework.py)** — `@trace` marker 工厂 + `pytest_collection_modifyitems` 校验 hook(复制进项目即用)
+- **[assets/test_trace_example.py](assets/test_trace_example.py)** — 规范标注示例(SIT/API/UAT/E2E/hotfix 五种写法)
+- **[assets/pytest_trace_marker.ini.snippet](assets/pytest_trace_marker.ini.snippet)** — `trace:` marker 注册行(贴进 pytest.ini)
+- **[scripts/trace_drift.py](scripts/trace_drift.py)** — 设计↔测试漂移检测器(静态扫描,4 态报告)
 
 ### 关键资源
 
@@ -418,10 +466,16 @@ cd backend && go test -coverprofile=coverage.out ./...
 
 ---
 
-**版本**: v7.1
-**更新日期**: 2026-06-01
+**版本**: v7.3
+**更新日期**: 2026-07-30
 
 **更新日志**：
+- v7.3 (2026-07-30): 🔧 **收紧 UT 不进入 `@trace` 范围**(镜像 .claude/skills/qa,路径已 adapt)
+  - `VALID_AC` 移除 `"UT"`;`ac="UT"` 报专属引导 issue;文档 UT 由"可选"改"不适用 `@trace`"
+  - 防偏:`trace_framework.py` 加 `VALID_AC↔SSOT` 元不变式(改枚举即自测报警);`test_traceability.md` §3 加语义对齐自检三问
+- v7.2 (2026-07-29): 🎯 **测试可追溯性 + 设计漂移检测**(镜像 .claude/skills/qa,路径已 adapt)
+  - 新增 `@trace` marker + `references/test_traceability.md` + `assets/{trace_framework.py,test_trace_example.py,pytest_trace_marker.ini.snippet}` + `scripts/trace_drift.py`
+  - 「唯一真实来源」表扩 5 行(保持 UAT=PRD);新增「分层用例 review」节
 - v7.1 (2026-06-01): 用户反馈修正五层测试定义
   - E2E 重定义为"数据层 + 后端 + 前端"三层联调验证（触发源在前端）
   - API 增加测试数据管理策略（QA 主动索取测试数据）和多协议支持声明

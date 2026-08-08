@@ -29,7 +29,7 @@ load_env_config() {
         echo "# 数据库配置"
         echo "export ${env^^}_DB_HOST=\"localhost\""
         echo "export ${env^^}_DB_PORT=\"5432\""
-        echo "export ${env^^}_DB_NAME=\"event_db\""
+        echo "export ${env^^}_DB_NAME=\"app_db\""
         echo "export ${env^^}_DB_USER=\"postgres\""
         echo "export ${env^^}_DB_PASSWORD=\"your-password\""
         echo ""
@@ -77,7 +77,7 @@ load_env_config() {
     kubeconfig="${!kubeconfig}"
 
     # 导出环境变量
-    export RESOURCE_METER_API_URL="$api_url"
+    export SERVICE_API_URL="$api_url"
     export DB_HOST="$db_host"
     export DB_PORT="${db_port:-5432}"
     export DB_NAME="$db_name"
@@ -95,7 +95,7 @@ load_env_config() {
     fi
 
     # 验证必需的环境变量
-    if [[ -z "$RESOURCE_METER_API_URL" ]] || [[ -z "$DB_HOST" ]] || [[ -z "$DB_PASSWORD" ]]; then
+    if [[ -z "$SERVICE_API_URL" ]] || [[ -z "$DB_HOST" ]] || [[ -z "$DB_PASSWORD" ]]; then
         echo "⚠️  警告：配置文件中缺少必需的配置项（${prefix}_API_URL, ${prefix}_DB_HOST, ${prefix}_DB_PASSWORD）"
         echo "请检查配置文件：$ENV_FILE"
         return 1

@@ -15,55 +15,55 @@ environments:
     api_url: "http://localhost:8082/api/v1"
     db_host: "localhost"
     db_port: 5433
-    db_name: "event_db-dev"
+    db_name: "app_db-dev"
     db_user: "CHANGEME"
     db_password: "CHANGEME"
     # 可选：覆盖默认环境变量
     env_vars:
-      RESOURCE_METER_API_URL: "http://localhost:8082/api/v1"
+      SERVICE_API_URL: "http://localhost:8082/api/v1"
       DB_HOST: "localhost"
       DB_PORT: "5433"
-      DB_NAME: "event_db-dev"
+      DB_NAME: "app_db-dev"
       DB_USER: "CHANGEME"
       DB_PASSWORD: "CHANGEME"
 
   # 测试环境
   test:
     name: "测试环境"
-    api_url: "http://127.0.0.10:30882/api/v1"
-    db_host: "127.0.0.10"
+    api_url: "http://<YOUR_DB_HOST>:30882/api/v1"
+    db_host: "<YOUR_DB_HOST>"
     db_port: 32432
-    db_name: "event_db"
+    db_name: "app_db"
     db_user: "CHANGEME"
     db_password: "CHANGEME"
     env_vars:
-      RESOURCE_METER_API_URL: "http://127.0.0.10:30882/api/v1"
-      DB_HOST: "127.0.0.10"
+      SERVICE_API_URL: "http://<YOUR_DB_HOST>:30882/api/v1"
+      DB_HOST: "<YOUR_DB_HOST>"
       DB_PORT: "32432"
-      DB_NAME: "event_db"
+      DB_NAME: "app_db"
       DB_USER: "CHANGEME"
       DB_PASSWORD: "CHANGEME"
 
   # 生产环境
   prod:
     name: "生产环境"
-    api_url: "http://127.0.0.1:31676/api/v1"
-    db_host: "127.0.0.10"
+    api_url: "http://<YOUR_PROD_API_HOST>:31676/api/v1"
+    db_host: "<YOUR_DB_HOST>"
     db_port: 32432
-    db_name: "event_db"
+    db_name: "app_db"
     db_user: "CHANGEME"
     db_password: "CHANGEME"
     env_vars:
-      RESOURCE_METER_API_URL: "http://127.0.0.1:31676/api/v1"
-      DB_HOST: "127.0.0.10"
+      SERVICE_API_URL: "http://<YOUR_PROD_API_HOST>:31676/api/v1"
+      DB_HOST: "<YOUR_DB_HOST>"
       DB_PORT: "32432"
-      DB_NAME: "event_db"
+      DB_NAME: "app_db"
       DB_USER: "CHANGEME"
       DB_PASSWORD: "CHANGEME"
     # 备选 API 地址（高可用）
     api_urls:
-      - "http://127.0.0.1:31676/api/v1"
-      - "http://127.0.0.1:31676/api/v1"
+      - "http://<YOUR_PROD_API_HOST>:31676/api/v1"
+      - "http://<YOUR_PROD_API_HOST_STANDBY>:31676/api/v1"
 
 # # ============================================================
 # # 巡检级别配置
@@ -151,10 +151,10 @@ notification:
     smtp_port: 587
     smtp_user: "noreply@example.com"
     # 密码从环境变量读取：SMTP_PASSWORD
-    from: "Resource Meter 巡检 <noreply@example.com>"
+    from: "Service Monitor <noreply@example.com>"
     to:
-      - "hupingshan@example.com"
-      - "chenhuazhong@example.com"
+      - "dev1@example.com"
+      - "dev2@example.com"
     # 仅在失败时发送
     on_failure_only: true
 
@@ -164,7 +164,7 @@ notification:
     # Webhook URL 从环境变量读取：SLACK_WEBHOOK_URL
     webhook_url_env: "SLACK_WEBHOOK_URL"
     channel: "#{PROJECT_NAME}-alerts"
-    username: "Resource Meter 巡检"
+    username: "Service Monitor"
     icon_emoji: ":warning:"
     on_failure_only: true
 
@@ -291,10 +291,10 @@ debug:
 # # ============================================================
 custom:
   # 项目特定的自定义配置
-  project_name: "Resource Meter"
+  project_name: "<YOUR_PROJECT>"
   project_version: "v3.3"
-  team_name: "DevOps 团队"
-  contact_email: "hupingshan@example.com"
+  team_name: "<YOUR_TEAM>"
+  contact_email: "contact@example.com"
 
   # 标签（用于报告分类和过滤）
   tags:

@@ -1,8 +1,8 @@
 #!/bin/bash
 # ============================================================
-# Resource Meter Sentinel - 简化巡检命令
+# Service Sentinel - 简化巡检命令
 # ============================================================
-# 功能：提供简洁的命令行接口执行 Resource Meter 巡检
+# 功能：提供简洁的命令行接口执行服务巡检
 # 用法：./inspect [LEVEL] [ENV]
 # 示例：
 #   ./inspect sanity prod          # 健全巡检生产环境
@@ -59,7 +59,7 @@ msg() {
 # 显示帮助信息
 show_help() {
     cat <<EOF
-${GREEN}Resource Meter Regular-Checker${NC}
+${GREEN}Service Regular-Checker${NC}
 简化命令行接口 - 一条命令完成巡检
 
 ${YELLOW}用法:${NC}
@@ -191,7 +191,7 @@ load_config() {
     kubeconfig=$(grep "^${prefix}_KUBECONFIG=" "$env_file" 2>/dev/null | cut -d'=' -f2)
 
     # 导出环境变量
-    export RESOURCE_METER_API_URL="$api_url"
+    export SERVICE_API_URL="$api_url"
     export DB_HOST="$db_host"
     export DB_PORT="${db_port:-5432}"
     export DB_NAME="$db_name"
@@ -213,13 +213,13 @@ load_config() {
     fi
 
     # 验证必需的环境变量
-    if [[ -z "$RESOURCE_METER_API_URL" ]] || [[ -z "$DB_HOST" ]] || [[ -z "$DB_PASSWORD" ]]; then
+    if [[ -z "$SERVICE_API_URL" ]] || [[ -z "$DB_HOST" ]] || [[ -z "$DB_PASSWORD" ]]; then
         error "配置文件中缺少必需的配置项（${prefix}_API_URL, ${prefix}_DB_HOST, ${prefix}_DB_PASSWORD）"
         return 1
     fi
 
     info "配置加载成功"
-    msg "API URL: $RESOURCE_METER_API_URL"
+    msg "API URL: $SERVICE_API_URL"
     msg "数据库: ${DB_HOST}:${DB_PORT}/${DB_NAME}"
     if [[ -n "$KUBECONFIG" ]]; then
         msg "KUBECONFIG: $KUBECONFIG"
@@ -282,7 +282,7 @@ fi
 
 echo ""
 echo "=========================================="
-echo "Resource Meter Regular-Checker"
+echo "Service Regular-Checker"
 echo "=========================================="
 msg "级别: $LEVEL"
 msg "环境: $ENV"

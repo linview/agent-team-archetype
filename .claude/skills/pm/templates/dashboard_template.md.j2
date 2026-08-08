@@ -1,4 +1,4 @@
-# Resource Meter 项目进度看板
+# 项目进度看板
 **更新时间**: {{ update_time }}
 **说明**: 本文档基于 `docs/scrum/metadata.json` 自动生成
 
@@ -45,4 +45,8 @@
 |------|------|------|
 | ✅ COMPLETED | {{ statistics.completed_stories }} | {{ statistics.completion_rate }} |
 | 🚧 IN_PROGRESS | {{ statistics.in_progress_stories }} | - |
-| 📋 TODO | {{ statistics.total_stories - statistics.completed_stories - statistics.in_progress_stories }} | - |
+| 🧪 TESTING | {{ statistics.testing_stories | default(0) }} | - |
+| 🚫 BLOCKED | {{ statistics.blocked_stories | default(0) }} | - |
+| ⏸️ DEFERRED | {{ statistics.deferred_stories | default(0) }} | - |
+| ❌ CANCELLED | {{ statistics.cancelled_stories | default(0) }} | - |
+| 📋 TODO | {{ statistics.todo_stories | default(0) }} | - |

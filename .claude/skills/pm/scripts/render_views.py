@@ -36,6 +36,7 @@ def group_stories_by_status(metadata: dict) -> dict:
         "TESTING": [],
         "COMPLETED": [],
         "BLOCKED": [],
+        "DEFERRED": [],
         "CANCELLED": [],
     }
 
@@ -87,7 +88,7 @@ def render_dashboard_md(metadata: dict, template_str: str) -> str:
     return template.render(**template_data)
 
 
-def validate_kanban_format(content: str) -> bool:
+def validate_kanban_format(content: str, metadata: dict = None) -> bool:
     """验证 KANBAN.md 格式完整性（防止文档退化）"""
     # Unicode 泳道图格式验证
     required_elements = [
@@ -103,17 +104,21 @@ def validate_kanban_format(content: str) -> bool:
             print(f"❌ 缺少元素: {element}")
             return False
 
-    # 验证行数（防止内容丢失）
+    # 验证行数（防止内容丢失）—— 动态下限，适配 POC 早期小项目
+    # 注意:kanban_renderer 单泳道有 [:20] 显示上限 + >10 折叠,COMPLETED 大泳道只渲染 20 个,
+    # 故实际每 Story 平均 ~3-4 行(非 5);系数取 3,关键元素检查(┌─/📋 待办/✅ 已完成)是主防线
     lines = content.split("\n")
-    if len(lines) < 100:
-        print(f"❌ KANBAN.md 行数过少: {len(lines)} < 100")
+    total = len(metadata["stories"]) if metadata else 0
+    min_lines = max(25, total * 3)
+    if len(lines) < min_lines:
+        print(f"❌ KANBAN.md 行数过少: {len(lines)} < {min_lines}")
         return False
 
     print(f"✅ KANBAN.md 格式验证通过 ({len(lines)} 行)")
     return True
 
 
-def validate_dashboard_format(content: str) -> bool:
+def validate_dashboard_format(content: str, metadata: dict = None) -> bool:
     """验证 DASHBOARD.md 格式完整性（防止文档退化）"""
     required_sections = [
         "## 📊 Epic 进度总览",
@@ -125,10 +130,13 @@ def validate_dashboard_format(content: str) -> bool:
             print(f"❌ 缺少章节: {section}")
             return False
 
-    # 验证行数（防止内容丢失）
+    # 验证行数（防止内容丢失）—— 动态下限，适配 POC 早期小项目
+    # DASHBOARD 结构：Story 详情区每 Story 占 1 行 + 固定开销（Epic 表/统计/标题约 40 行）
     lines = content.split("\n")
-    if len(lines) < 80:
-        print(f"❌ DASHBOARD.md 行数过少: {len(lines)} < 80")
+    total = len(metadata["stories"]) if metadata else 0
+    min_lines = max(20, total + 40)
+    if len(lines) < min_lines:
+        print(f"❌ DASHBOARD.md 行数过少: {len(lines)} < {min_lines}")
         return False
 
     print(f"✅ DASHBOARD.md 格式验证通过 ({len(lines)} 行)")
@@ -147,7 +155,7 @@ def main():
 
     # 渲染 KANBAN.md（Unicode 泳道图）
     kanban_content = render_kanban_md(metadata)
-    if not validate_kanban_format(kanban_content):
+    if not validate_kanban_format(kanban_content, metadata):
         print("❌ KANBAN.md 格式验证失败，拒绝写入")
         return
 
@@ -165,7 +173,7 @@ def main():
 
     dashboard_template_str = dashboard_template_file.read_text()
     dashboard_content = render_dashboard_md(metadata, dashboard_template_str)
-    if not validate_dashboard_format(dashboard_content):
+    if not validate_dashboard_format(dashboard_content, metadata):
         print("❌ DASHBOARD.md 格式验证失败，拒绝写入")
         return
 

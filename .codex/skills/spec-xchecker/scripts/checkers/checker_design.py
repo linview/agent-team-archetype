@@ -47,6 +47,18 @@ class DesignChecker:
         Returns:
             CheckResult
         """
+        # 最强证据：Design Spec 已成功加载（load_design_spec 支持 frontmatter design_docs + 正文两种格式，v2.7 修复）
+        # 避免误报 frontmatter design_docs 引用（DS-01 原只认正文 "Design Spec:" 行）
+        if self.design_spec_content:
+            return CheckResult(
+                check_id='DS-01',
+                description='Story 是否引用 Design Spec',
+                passed=True,
+                severity='P1',
+                message='Story 引用了 Design Spec（已成功加载内容）',
+                details='引用来源: frontmatter design_docs 或正文 Design Spec 行（由 load_design_spec 解析）'
+            )
+
         # 检查 Story 文档中是否有 Design Spec 引用
         # 支持格式：Design Spec:, **Design Spec**:, **Design Spec v4.2**：
         pattern = r'\*{0,2}Design[^\n]*?Spec\*{0,2}[^:\n]*?[:：]'
@@ -190,6 +202,29 @@ class DesignChecker:
         Returns:
             CheckResult
         """
+        # 最强证据：Design Spec 已成功加载即证明引用路径有效（v2.7 修复：支持 frontmatter design_docs）
+        # 避免误报 frontmatter design_docs 引用（DS-03 原只认正文 "Design Spec:" 行）
+        if self.design_spec_content:
+            version_match = re.search(r'版本\s*[:：]?\s*v(\d+\.\d+)', self.design_spec_content)
+            if version_match:
+                version = version_match.group(1)
+                return CheckResult(
+                    check_id='DS-03',
+                    description='Design Spec 引用是否正确',
+                    passed=True,
+                    severity='P2',
+                    message=f'Design Spec 引用正确（版本 v{version}）',
+                    details='引用路径已验证（load_design_spec 成功加载）'
+                )
+            return CheckResult(
+                check_id='DS-03',
+                description='Design Spec 引用是否正确',
+                passed=True,
+                severity='P2',
+                message='Design Spec 引用正确（已成功加载）',
+                details='引用路径已验证（load_design_spec 成功加载）'
+            )
+
         # 提取 Design Spec 引用路径
         ref_pattern = r'Design\s+Spec\s*[:：]\s*([^\n]+\.md)'
         match = re.search(ref_pattern, self.story_content, re.IGNORECASE)

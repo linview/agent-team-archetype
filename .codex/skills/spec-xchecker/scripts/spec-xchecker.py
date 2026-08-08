@@ -15,6 +15,10 @@ import dataclasses
 from pathlib import Path
 from datetime import datetime
 
+# 直接运行入口时，注入 skill 根目录使 `scripts.*` 包前缀可用（namespace package）。
+# 否则 `from scripts.lib.X import` 会报 ModuleNotFoundError: No module named 'scripts'。
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 # 导入 checker 模块
 from scripts.lib.story_resolver import (
     get_current_story_id,
@@ -128,33 +132,20 @@ def run_checks(project_dir: str, story_id: str, mode: str, scope: str, enable_dy
     # 3. 提取 AC 列表
     ac_list = extract_acceptance_criteria(story_content)
 
-    # 3.5. 生成动态检查策略（v2.4 POC）
+    # 3.5. 生成动态检查策略（v2.5 AC 驱动）
     strategy = None
     if enable_dynamic_strategy:
         try:
-            generator = ACBasedStrategyGenerator(project_dir)
+            generator = ACBasedStrategyGenerator(story_content, ac_list)
+            strategy = generator.generate_strategy()
 
-            # 尝试从 AC 列表生成策略
-            if ac_list:
-                story_metadata = {
-                    'acceptance_criteria': ac_list,
-                    'content': story_content,
-                }
-                strategy = generator.generate(story_metadata, mode)
-            else:
-                # AC 列表为空，尝试从全文直接解析
-                story_metadata = {
-                    'content': story_content,
-                }
-                strategy = generator.generate(story_metadata, mode)
-
-            results['strategy'] = dataclasses.asdict(strategy)
+            results['strategy'] = strategy  # generate_strategy() 已返回 dict
 
             # 打印策略摘要
-            if strategy.detected_ac_types:
-                print(f"[spec-xchecker] 🎯 检测到 AC 类型: {', '.join(strategy.detected_ac_types)}")
-                print(f"[spec-xchecker] 📋 Story 类型: {strategy.story_type}")
-                print(f"[spec-xchecker] ✅ 执行检查项: {len(strategy.checks)} 个")
+            if strategy.get('detected_ac_types'):
+                print(f"[spec-xchecker] 🎯 检测到 AC 类型: {', '.join(strategy['detected_ac_types'])}")
+                print(f"[spec-xchecker] 📋 Story 类型: {strategy['story_type']}")
+                print(f"[spec-xchecker] ✅ 执行检查项: {len(strategy['final_checks'])} 个")
             else:
                 print(f"[spec-xchecker] ⚠️  未检测到已知 AC 类型，使用默认策略")
         except Exception as e:
@@ -176,7 +167,27 @@ def run_checks(project_dir: str, story_id: str, mode: str, scope: str, enable_dy
     scenario_checker = ScenarioChecker(project_dir, ac_list)
 
     # 获取策略指定的检查列表
-    strategy_checks = strategy.checks if strategy else []
+    strategy_checks = strategy['final_checks'] if strategy else []
+
+    # UNKNOWN fallback（v4.1 修复 B2 副作用）：策略未能分类时 final_checks 为空，
+    # 不能让检查项为 0 —— 回退到全集，交由下方 mode 裁剪决定深度。
+    # 原本被 go_code 等过宽类型误判兜底（21 项全跑），B2 收紧后需显式 fallback。
+    if not strategy_checks:
+        strategy_checks = ['DS-01','DS-02','DS-03','DS-04',
+                           'SC-01','SC-02','SC-03','SC-04','SC-05','SC-06',
+                           'CT-01','CT-02','CT-03','CT-04','CT-05',
+                           'ST-01','ST-02','ST-03','ST-04','ST-05','ST-06']
+
+    # mode 层裁剪（v4.1 修复 B3）：mode 决定本次检查深度，在策略筛选基础上再裁剪。
+    # 对齐 SKILL.md 模式契约 —— quick 仅 DS 层；medium = DS+SC；deep = DS+SC+CT+ST。
+    # 策略引擎按 AC 类型挑「该跑哪些」，mode 决定「这次跑多深」，两者叠加。
+    _mode_layers = {
+        'quick':  {'DS'},
+        'medium': {'DS', 'SC'},
+        'deep':   {'DS', 'SC', 'CT', 'ST'},
+    }
+    _allowed_layers = _mode_layers.get(mode, {'DS', 'SC', 'CT', 'ST'})
+    strategy_checks = [c for c in strategy_checks if c.split('-', 1)[0] in _allowed_layers]
 
     # DS 层检查（Design Spec ↔ Scrum）
     if 'DS-01' in strategy_checks:
@@ -233,8 +244,10 @@ def run_checks(project_dir: str, story_id: str, mode: str, scope: str, enable_dy
         check_id = check.get('check_id', '')
 
         # 如果有策略，只统计策略中指定的检查
+        # v4.1: 用 mode 裁剪 + UNKNOWN fallback 后的 strategy_checks（原 strategy['final_checks']
+        #       在 UNKNOWN 时为空，会 skip 所有已执行的检查 → total_checks=0，B3 修复失效）
         if strategy is not None:
-            if check_id not in strategy.checks:
+            if check_id not in strategy_checks:
                 # 不在策略中的检查，不计入统计
                 continue
 

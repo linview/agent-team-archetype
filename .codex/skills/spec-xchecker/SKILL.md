@@ -284,9 +284,15 @@ Spec-XChecker 与其他角色密切协作：
 
 ---
 
-**版本**: v4.0 | **最后更新**: 2026-04-29 | **维护者**: maintainer@example.com
+**版本**: v4.1 | **最后更新**: 2026-07-03 | **维护者**: maintainer@example.com
 
 **更新日志**:
+- v4.1 (2026-07-03): 🐛 **B2/B3/B4 工具缺陷修复**（patch，对比验证驱动）
+  - **B2** `strategy_generator.py`：`go_code` 模式收紧（移除裸"实现"/"新增函数"/"创建 API"，改用 `.go`/`internal/pkg`/`go build`），Python 项目不再误判 go_code
+  - **B3** `spec-xchecker.py`：`mode` 层裁剪（quick=DS / medium=DS+SC / deep=全集）+ UNKNOWN fallback 到全集 + 汇总统计改用裁剪后 `strategy_checks`（修 mode 不裁剪 + UNKNOWN 时 total=0）
+  - **B4** `story_resolver.py`：`load_design_spec` 格式2 markdown 链接识别扩展（`link_path` 含 `design/` 也识别），DS-01 不再误报"未引用"
+  - 对比验证：EPIC-5 全 5 Story before/after 全绿，quick=4/medium=10/deep=21，DS-01 由"未引用"→通过
+  - 残留 R1（中文无空格正则）/R3（COMPLETED Story AC 提取）/R2（JSON stdout 污染）未治本，靠 UNKNOWN fallback 兜底，待另立 Story
 - v4.0 (2026-04-29): 🎯 **官方标准重构**：完全符合 Claude Code 官方文档
   - **目录结构规范化**：调整为官方标准目录
     - ✅ `scripts/` - 所有可执行代码（包括 lib/ 和 checkers/ 子目录）

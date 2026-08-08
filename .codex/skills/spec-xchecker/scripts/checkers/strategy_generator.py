@@ -56,8 +56,8 @@ class ACBasedStrategyGenerator:
             r"UAT\s+测试", r"test_uat", r"用户\s+验收", r"验收\s+测试"
         ],
         "go_code": [
-            r"创建\s+API", r"新增\s+函数", r"实现", r"internal/pkg", r"\.go\s+文件",
-            r"Go\s+代码", r"Golang"
+            r"internal/pkg", r"\.go\s+文件", r"\.go\b", r"Go\s+代码",
+            r"Golang", r"go\s+build", r"go\s+test", r"go\s+mod"
         ],
         "architecture": [
             r"架构\s+设计", r"设计\s+原则", r"SKILL", r"设计\s+文档",
@@ -247,11 +247,12 @@ class ACBasedStrategyGenerator:
         Returns:
             bool: 是否匹配
         """
-        # 检查 AC 列表
+        # 检查 AC 列表（元素可能是 str 或 dict，兼容 extract_acceptance_criteria 的 List[str] 约定）
         for ac in self.ac_list:
-            ac_title = ac.get("title", "")
-            ac_desc = ac.get("description", "")
-            ac_text = f"{ac_title} {ac_desc}"
+            if isinstance(ac, dict):
+                ac_text = f"{ac.get('title', '')} {ac.get('description', '')}"
+            else:
+                ac_text = str(ac)
 
             if re.search(pattern, ac_text, re.IGNORECASE):
                 return True

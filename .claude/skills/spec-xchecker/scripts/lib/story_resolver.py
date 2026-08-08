@@ -194,15 +194,17 @@ def load_design_spec(story_id: str, project_dir: str) -> Optional[str]:
                 # 移除锚点（#xxx）
                 design_spec_ref = re.sub(r'#.*$', '', design_spec_ref)
 
-    # 格式 2: Markdown 链接格式 [文本](路径.md)（v2.6 修复）
+    # 格式 2: Markdown 链接格式 [文本](路径.md)（v2.6 修复, v4.1 扩展 B4）
+    # v4.1: link_path 指向 design 目录也识别 —— Story body 常用
+    #       `[server_domain §6](../../design/domains/server_domain_v1.0.md)`，
+    #       link_text 是域名而非"设计"，旧逻辑漏识别导致 DS-01 误报"未引用"。
     if not design_spec_ref:
         link_pattern = r'\[([^\]]+)\]\(([^)]+\.md[^)]*)\)'
         link_matches = re.findall(link_pattern, story_content)
         for link_text, link_path in link_matches:
-            if 'Design Spec' in link_text or '设计' in link_text:
-                design_spec_ref = link_path
-                # 移除锚点
-                design_spec_ref = re.sub(r'#.*$', '', design_spec_ref)
+            if ('Design Spec' in link_text or '设计' in link_text
+                    or 'design/' in link_path or '/design' in link_path):
+                design_spec_ref = re.sub(r'#.*$', '', link_path)
                 break
 
     # 格式 3: "Design Spec: xxx.md" 或 "Design Spec 参考: xxx"（原有格式）
@@ -277,7 +279,8 @@ def extract_acceptance_criteria(story_content: str) -> list[str]:
                 return matches
 
     # 优先级 2: 从 Markdown ## AC 章节提取（fallback）
-    ac_section_pattern = r'##\s*(AC|Acceptance Criteria|验收标准)(.*?)^(##\s*)'
+    # 结束符用 lookahead (?=##\s)：要求下一行是「## + 空白」，排除「### AC-x」（三井号）被误当作章节结束（v2.7 修复）
+    ac_section_pattern = r'##\s*(AC|Acceptance Criteria|验收标准)(.*?)^(?=##\s)'
     match = re.search(ac_section_pattern, story_content, re.MULTILINE | re.DOTALL | re.IGNORECASE)
 
     if not match:

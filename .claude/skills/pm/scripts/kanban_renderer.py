@@ -126,7 +126,7 @@ def render_kanban_unicode(metadata: Dict[str, Any]) -> str:
     lines = []
 
     # 标题
-    lines.append("# Resource Meter Sprint 看板（泳道图）")
+    lines.append("# Sprint 看板（泳道图）")
     lines.append(f"**更新时间**: {metadata['generated_at']}")
     lines.append("**说明**: 使用 Unicode 字符绘制的状态泳道图")
     lines.append("")
@@ -136,7 +136,8 @@ def render_kanban_unicode(metadata: Dict[str, Any]) -> str:
     total = stats["total_stories"]
     completed = stats["completed_stories"]
     in_progress = stats["in_progress_stories"]
-    todo = total - completed - in_progress
+    deferred = stats.get("deferred_stories", 0)
+    todo = total - completed - in_progress - deferred
 
     lines.append("## 📊 统计摘要")
     lines.append("")
@@ -145,6 +146,7 @@ def render_kanban_unicode(metadata: Dict[str, Any]) -> str:
     lines.append(f"| 📋 待办 | {todo} | {todo * 100 // total}% |")
     lines.append(f"| 🚧 进行中 | {in_progress} | {in_progress * 100 // total}% |")
     lines.append(f"| ✅ 已完成 | {completed} | {stats['completion_rate']} |")
+    lines.append(f"| ⏸️ 已延迟 | {deferred} | {deferred * 100 // total}% |")
     lines.append(f"| **总计** | **{total}** | **100%** |")
     lines.append("")
     lines.append(f"**Epic 总数**: {stats['total_epics']}")
@@ -163,6 +165,7 @@ def render_kanban_unicode(metadata: Dict[str, Any]) -> str:
         "TESTING": [],
         "COMPLETED": [],
         "BLOCKED": [],
+        "DEFERRED": [],
         "CANCELLED": [],
     }
 
@@ -179,6 +182,7 @@ def render_kanban_unicode(metadata: Dict[str, Any]) -> str:
         ("测试中", "🧪", grouped_stories["TESTING"]),
         ("已完成", "✅", grouped_stories["COMPLETED"]),
         ("阻塞", "🚫", grouped_stories["BLOCKED"]),
+        ("已延迟", "⏸️", grouped_stories["DEFERRED"]),
         ("已取消", "❌", grouped_stories["CANCELLED"]),
     ]
 

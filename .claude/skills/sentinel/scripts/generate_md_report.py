@@ -88,7 +88,7 @@ def generate_markdown_report(results, output_file, env, level, api_url, db_info,
 
     # 生成报告内容
     report_lines = [
-        "# Resource Meter 定期巡检报告\n",
+        "# 服务定期巡检报告\n",
         f"**环境**: {env}",
         f"**级别**: {level}",
         f"**时间**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",

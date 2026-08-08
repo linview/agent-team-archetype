@@ -1,7 +1,7 @@
 ---
 name: "dev"
 description: "开发工作流程指导 - 编码、测试、代码质量、MR/PR 创建和 CI/CD。用于开发任务、编码、功能实现、Bug 修复、单元测试、代码覆盖率、代码审查、CI/CD 流水线和 Git 操作。"
-version: "5.1"
+version: "5.2"
 ---
 
 # Development Workflow
@@ -55,7 +55,7 @@ Developer 三不做：
 | **Go 源代码** | `{PROJECT_NAME}.go`, `config_dev.go`, `health_handler.go` | `{PROJECT_NAME}.go`, `config-dev.go`, `health-handler.go` |
 | **配置文件** | `config_dev.yaml`, `database_config.yaml` | `config-dev.yaml`, `database-config.yaml` |
 | **Shell 脚本** | `start_dev.sh`, `init_db.sh` | `start-dev.sh`, `init-db.sh` |
-| **目录命名** | `example-service_informer`, `scripts_database` | `example-service-informer`, `scripts-database` |
+| **目录命名** | `service_event_watcher`, `scripts_database` | `service-event-watcher`, `scripts-database` |
 | **API 定义** | `{PROJECT_NAME}.api`, `user_service.api` | `{PROJECT_NAME}.api`, `user-service.api` |
 | **二进制文件** | `{PROJECT_NAME}_api`, `{PROJECT_NAME}_cli` | `{PROJECT_NAME}-api`, `{PROJECT_NAME}-cli` |
 
@@ -90,7 +90,7 @@ git mv etc/config-dev.yaml etc/config_dev.yaml
 git mv {PROJECT_NAME}.go {PROJECT_NAME}.go
 
 # 示例：重命名目录
-git mv sandbox/example-service-informer sandbox/example-service_informer
+git mv sandbox/service-event-watcher sandbox/service_event_watcher
 ```
 
 **2. 更新所有引用**
@@ -333,6 +333,20 @@ func TestXXX(t *testing.T) {
 >
 > **优势**：1 条命令替代 6-8 步 Git 操作，自动检测项目配置，彩色输出提示
 
+### Worktree 位置（⚠️ 铁律）
+
+**默认位置：项目根目录下的 `.worktrees/{branch_name}/`**（不要用项目外的兄弟目录）
+
+- ✅ `{project_root}/.worktrees/feat-story-06-01/`
+- ❌ `../{project_name}-worktrees/`、`../worktrees/`、`/tmp/...`
+
+**为什么**：留在项目根内 → 可发现、清理不误伤（兄弟目录易被当无关文件夹整体删除），且不破坏以项目根为基准的容器卷/bind mount（实测 netbox-lab 容器卷被兄弟目录 worktree 清理误伤，容器直接 exited）。
+
+**前置（创建前必做）**：确保 `.worktrees/` 在 `.gitignore`：
+```bash
+grep -qxF '.worktrees/' .gitignore 2>/dev/null || echo '.worktrees/' >> .gitignore
+```
+
 ### 分支命名规范
 
 - 功能分支：`feat/{task_id}-{summary}`
@@ -343,12 +357,12 @@ func TestXXX(t *testing.T) {
 ### 标准流程
 
 ```bash
-# 1. 创建 worktree
+# 1. 创建 worktree（项目根下的 .worktrees/ 内，已在前置步骤加入 .gitignore）
 cd {project_root}
-git worktree add ../{worktree_dir}/{branch_name} -b {branch_name}
+git worktree add .worktrees/{branch_name} -b {branch_name}
 
 # 2. 在 worktree 中开发
-cd ../{worktree_dir}/{branch_name}
+cd .worktrees/{branch_name}
 # ... 开发代码 ...
 git add .
 git commit -m "<type>(<scope>): <subject>"
@@ -360,13 +374,13 @@ git push origin {branch_name}
 
 # 5. MR/PR 合并后，清理 worktree
 cd {project_root}
-git worktree remove ../{worktree_dir}/{branch_name}
+git worktree remove .worktrees/{branch_name}
 git branch -d {branch_name}
 ```
 
 **说明**:
 - `{project_root}`: 项目根目录
-- `{worktree_dir}`: worktree 存放目录（常见值：`../{project_name}-worktrees`, `../worktrees`）
+- worktree 固定存放在 **`{project_root}/.worktrees/`**，不要使用项目外的兄弟目录（见上文「Worktree 位置」铁律）
 
 ### Worktree 管理
 
@@ -561,16 +575,17 @@ Claude 执行时按优先级推断占位符：
 `{main_branch}`, `{project_root}`, `{project_docs}`, `{test_cmd}`, `{build_cmd}`, `{fmt_cmd}`, `{lint_cmd}`, `{vcs_platform}`
 
 **中等可推断性**（60-80%）：
-`{coverage_threshold}`（默认 70%）, `{worktree_dir}`, `{sit_run_cmd}`
+`{coverage_threshold}`（默认 70%）, `{sit_run_cmd}`
 
 ---
 
-**版本**: v5.1
+**版本**: v5.2
 **创建日期**: 2026-04-28
 **作者**: Development Team
 **状态**: 正式发布
 
 **更新日志**:
+- v5.2 (2026-07-17): Worktree 默认位置改为项目根 `.worktrees/`（铁律）+ 前置 .gitignore 检查，废弃兄弟目录默认值与 `{worktree_dir}` 占位符
 - v5.1 (2026-04-29): 整合 naming-conventions 到代码风格章节
 - v5.0 (2026-04-28): 重构为符合官方最佳实践
 - v4.1 (2026-04-28): 添加渐进式揭示 + 明确覆盖率指标
@@ -578,4 +593,3 @@ Claude 执行时按优先级推断占位符：
 - v3.1 (2026-04-25): 新增 Story-Driven Development 铁律
 - v3.0 (2026-02-12): 从 pm SKILL 迁移 MR 工作流
 - v2.0 (2026-02-03): 初始版本
-
