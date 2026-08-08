@@ -1,7 +1,8 @@
 # AI-Native Development Guide Book
 
 **版本**: v0.2.0-alpha
-**更新日期**: 2026-06-12
+**对齐项目版本**: ≥ v2.4（见文末「与项目 CHANGELOG 的同步关系」）
+**更新日期**: 2026-07-29
 **状态**: 🚧 持续迭代中
 
 ---
@@ -11,6 +12,8 @@
 本指南书籍系统阐述 AI-Native 开发方法论，核心理念是：
 
 **AI-Native + 软件工程标准 = 可持续、高质量的工程开发**
+
+> 本指南是 [agent-team-archetype](../../) 仓库的方法论专著——该仓库是 AI-Native **原型模板（archetype）**，采用「主项目方法论 + `examples/backend` 范例」双层结构。指南内容随仓库 [`CHANGELOG.md`](../../CHANGELOG.md) 演进持续迭代，同步机制见文末。
 
 ### 评判标准的转变
 
@@ -24,7 +27,6 @@
 - ✅ **换人来做** → 随时进入状态
 - ✅ **隔半年再激活** → 持续迭代开发
 - ✅ **设计-代码-测试** → 三域对齐一致
-- ✅ **多工程并行** → 以极低的心智成本，同时管理多个工程的并行开发
 
 ---
 
@@ -143,7 +145,7 @@ AI 在 AI-Native 开发中的角色：
 
 **示例：架构决策的快速验证**
 
-在 resource-meter 项目中，最初实现时没有线上运维数据，无法判断数据增速。通过回归测试的数据分析，发现 AI 推荐的 LEFT JOIN 方案存在性能问题（v4.1 版本架构缺陷）。
+在 example-service 项目中，最初实现时没有线上运维数据，无法判断数据增速。通过回归测试的数据分析，发现 AI 推荐的 LEFT JOIN 方案存在性能问题（v4.1 版本架构缺陷）。
 
 在 v4.2 版本中，人类做出架构决策：**将记录数更多的大表放在 LEFT JOIN 左侧**，从而减少行扫量。
 
@@ -244,7 +246,7 @@ A: 实践中这意味着：1) 先写 Design Doc 再让 Agent 实现 2) 验收时
 
 ### 4.1 Design Doc Semantic Versioning 的必要性
 
-> "在 resource-meter 的实践里是按照 design doc semantic versioning 的方式管理的，version 粒度取决于内容变更的影响。"
+> "在 example-service 的实践里是按照 design doc semantic versioning 的方式管理的，version 粒度取决于内容变更的影响。"
 
 **为什么需要版本控制？**
 
@@ -408,6 +410,8 @@ API (契约测试, 100%)
   ↓
 SIT (系统集成测试, 90%+)
   ↓
+E2E (端到端联调, 数据层+后端+前端三层贯通)
+  ↓
 UAT (用户验收测试, 85%+)
 ```
 
@@ -422,12 +426,11 @@ UAT (用户验收测试, 85%+)
 |---------|---------|---------|---------|-----------|
 | **UT** (单元测试) | 函数级别逻辑正确性 | 单个函数/方法 | Mock 外部依赖 | ≥ 50% |
 | **API** (契约测试) | 接口契约符合性 | HTTP 接口 | 真实 HTTP 请求/响应 | 100% |
-| **SIT** (系统集成测试) | 业务流程正确性 | 跨模块业务流程 | 真实数据库 + Redis | ≥ 90% |
+| **SIT** (系统集成测试) | 数据层 × 服务层一致性（交叉验证定位服务层 bug） | 跨模块业务流程 | 真实数据库 + Redis | ≥ 90% |
+| **E2E** (端到端联调) | 数据层 + 后端 + 前端三层贯通 | 前端 UI 触发的完整链路 | 完整部署环境（Playwright） | — |
 | **UAT** (用户验收测试) | 用户场景满足度 | 端到端用户场景 | 端到端环境 | ≥ 85% |
 
 ### 6.3 覆盖率目标与质量门禁
-
-🔧 **TODO**: 待补充
 
 **覆盖率目标**：
 - UT ≥ 50%
@@ -459,6 +462,19 @@ UAT (用户验收测试, 85%+)
 - DAO 层是"服务层-数据层"的接口
 - UT 只能 Mock 数据层，无法验证真实的数据交互
 - SIT 需要搭建完整的集成环境（服务、数据、中间件）
+
+**SIT 的交叉验证价值（DB-direct × API 对比）**
+
+SIT 不仅验证"业务流程正确性"，更承担**定位服务层 bug** 的职责——同一份预期数据，分别用 **DB 直查** 与 **API 调用** 两条路径取回并对比：
+
+| 对比结果 | 定位结论 |
+|---------|---------|
+| ✅ DB 直查 == API 返回 | 数据层与服务层一致，无服务层 bug |
+| ⚠️ DB 直查正确，API 返回错 | **服务层 bug**（数据对了，但接口取错/算错） |
+| 🔴 DB 直查错，API 返回"对" | **数据层 bug**（数据本就脏，接口只是如实返回） |
+| 🔴 两者都错 | 查根因：数据写入错 or 服务读取错，需进一步分层 |
+
+> 这套"双路对比"是 SIT 区别于 E2E 的核心价值：E2E 只看端到端结果对不对，**定位不出 bug 在哪一层**；SIT 的 DB-direct 交叉验证能精确指向服务层或数据层。详见 qa skill [`testing_layer_definitions.md`](../../.claude/skills/qa/references/testing_layer_definitions.md)。
 
 ---
 
@@ -654,32 +670,47 @@ sequenceDiagram
 
 **基于角色的开发模式**：
 
-- **/arch**：负责架构设计、技术选型、设计审查
-- **/pm**：负责 Scrum 管理、任务拆解、排期规划
-- **/dev**：负责代码实现、单元测试、本地自测
-- **/qa**：负责质量保障、测试用例编写、测试执行
-- **/devops**：负责发布运维、环境搭建、监控告警
+- **/arch**：架构设计、技术选型、设计文档语义化版本管理、跨层一致性审查
+- **/pm**：项目管理，Story/Epic/Sprint 编排、AC 驱动的任务拆解、看板与状态机门禁
+- **/dev**：代码实现、单元测试、本地自测、无-story 重构场景
+- **/qa**：测试验证策略（UT/API/SIT/E2E/UAT）、`@trace` 可追溯性、设计漂移检测、分层用例 review
+- **/ued**：前端体验设计、组件开发、交互优化、原型生成
+- **/devops**：发布运维、环境搭建、Docker/Helm 模板、监控告警
+- **/commit**：代码提交规范、Conventional Commits、MR 描述与作用域
+- **/refactor**：安全重构（逻辑不变前提下的结构优化、坏味道识别）
+- **/sentinel**：线上巡检、健康检查、RCA、数据质量验证
+- **/spec-xchecker**：Design↔Scrum↔Code↔Tests 四路对齐检查（与 /qa 的 `@trace` review 互补）
 
 **协作模式**：
-1. Architect 设计架构和接口
-2. Scrum 拆解任务并制定行动计划
-3. Developer 实现代码和测试
-4. QA 执行测试并验证质量
-5. DevOps 负责发布和运维
+1. /arch 设计架构、接口与数据模型
+2. /pm 从设计拆解 Story/Epic、排期并维护状态门禁
+3. /dev 按 SDD 实现代码与单元测试
+4. /qa 制定测试策略、用 `@trace` 标注追溯信息、执行分层测试
+5. /ued 前端体验与组件（如涉及）
+6. /devops 准备环境与发布计划
+7. /refactor 安全重构（技术债治理时）
+8. /commit 规范化提交与 MR
+9. /sentinel 线上巡检
+10. /spec-xchecker 四路对齐检查（贯穿全程）
 
-### 7.2 基于角色的开发（Architect/ScrumMaster/Developer/QA/DevOps）
-
-🔧 **TODO**: 待补充
+### 7.2 Agent Team 技能体系（10 角色）
 
 **角色定义**：
 
 | 角色 | 职责 | 技能 | 输出 |
 |------|------|------|------|
-| Architect | 架构设计、技术选型 | /arch | Design Doc (HLD) |
-| ScrumMaster | 任务拆解、排期规划 | /pm | SDD + 行动计划 |
+| Architect | 架构设计、技术选型、版本管理 | /arch | Design Doc (HLD/SDD) |
+| Project Manager | Story/Epic 编排、AC 拆解、状态门禁 | /pm | SDD + 行动计划 + 看板 |
 | Developer | 代码实现、单元测试 | /dev | Code + UT |
-| QA | 质量保障、测试执行 | /qa | Test Report |
+| QA | 测试策略、可追溯性、漂移检测 | /qa | Test Plan + Test Report |
+| UED | 前端体验、组件、原型 | /ued | 原型 + 组件 |
 | DevOps | 发布运维、监控告警 | /devops | Deployment Plan |
+| Committer | 提交规范、MR 描述 | /commit | Commit + MR |
+| Refactorer | 安全重构、坏味道治理 | /refactor | 重构报告 |
+| Sentinel | 线上巡检、RCA | /sentinel | 巡检报告 |
+| Spec-XChecker | Design↔Scrum↔Code↔Tests 对齐检查 | /spec-xchecker | 对齐报告 |
+
+> **pm 是流程编排中枢**：Story 状态机（8 状态 FSM）以 **AC 签字率** 作为门禁——IN_PROGRESS 需 [UT]、TESTING 需 [SIT] 等；`@trace` 是 review 工具，**不影响** pm 的状态门禁（门禁按 AC 签字率，不按 `@trace` 覆盖率）。详见 §6 测试策略与 qa skill [`test_traceability.md`](../../.claude/skills/qa/references/test_traceability.md)。
 
 ### 7.3 开发流程详解
 
@@ -742,7 +773,7 @@ Agent 在 YOLO mode 下：
    - 架构设计是否合理
    - 接口定义是否符合 Design
    - 技术选型是否恰当
-3. **ScrumMaster 审查**：
+3. **PM 审查**：
    - 任务完成度是否符合 SDD
    - 验收标准是否满足
    - 测试覆盖是否充分
@@ -753,7 +784,7 @@ Agent 在 YOLO mode 下：
 
 **MR 要求**：
 
-> "提供一个包含'设计、代码、测试'三者俱全的 MR 例子：https://git.example.com/example-org/resource-meter/-/merge_requests/41/diffs"
+> "提供一个包含'设计、代码、测试'三者俱全的 MR 例子：https://git.example.com/example-org/example-service/-/merge_requests/41/diffs"
 
 > "一般我会再 MR 里确保三个领域（design/code/test）的内容是可以相互佐证的才会提交。"
 
@@ -1008,21 +1039,22 @@ A: 统计上看，测试环境验证（Stage 3→4）是问题高发区：配置
 
 ### 11.1 Agent 的角色定义
 
-🔧 **TODO**: 待补充
-
-**核心 Agent 角色**：
+**核心 Agent 角色**（10 个技能）：
 
 | Agent | 角色定位 | 主要职责 | 关键技能 |
 |-------|---------|---------|---------|
-| /arch | 架构师 | 架构设计、技术选型 | 设计文档生成、架构审查 |
-| /pm | Scrum Master | 任务管理、排期规划 | SDD 生成、任务拆解 |
+| /arch | 架构师 | 架构设计、技术选型、版本管理 | 设计文档生成、架构审查 |
+| /pm | 项目经理（PM） | Story/Epic 编排、AC 拆解、状态门禁 | SDD 生成、任务拆解、看板 |
 | /dev | 开发工程师 | 代码实现、单元测试 | 代码生成、测试编写 |
-| /qa | 质量工程师 | 测试策略、质量保障 | 测试用例设计、测试执行 |
-| /devops | 运维工程师 | 发布运维、监控告警 | 发布计划、环境搭建 |
+| /qa | 质量工程师 | 测试策略、可追溯性、漂移检测 | `@trace` 标注、分层用例 review |
+| /ued | 前端体验设计师 | 前端体验、组件、原型 | 原型生成、交互优化 |
+| /devops | 运维工程师 | 发布运维、监控告警 | 发布计划、Docker/Helm |
+| /commit | 提交者 | 提交规范、MR | Conventional Commits |
+| /refactor | 重构者 | 安全重构 | 坏味道识别、重构技法 |
+| /sentinel | 哨兵 | 线上巡检 | 健康检查、RCA |
+| /spec-xchecker | 对齐检查器 | 四路对齐检查 | Design↔Scrum↔Code↔Tests |
 
 ### 11.2 Agent 协作模式
-
-🔧 **TODO**: 待补充
 
 **协作模式示例**：
 
@@ -1293,20 +1325,21 @@ project-template/
 
 ## Chapter 15: 实施案例与最佳实践
 
-### 15.1 典型实施案例（resource-meter 项目）
+### 15.1 仓库结构：archetype 双层模板
 
-🔧 **TODO**: 待补充
+> 本仓库（agent-team-archetype）本身就是一个 **AI-Native 原型模板**，可直接复制作为新项目脚手架。它采用「**主项目方法论 + `examples/backend` 范例**」双层结构——方法论与业务实现物理隔离，使主项目保持纯净、可复用。
 
-**项目背景**：
-- 项目名称：resource-meter
-- 实施时间：2025-2026
-- 实施方法：AI-Native 开发
+| 层 | 位置 | 内容 | 可直接复用 |
+|----|------|------|-----------|
+| **主项目（方法论）** | `/`（根目录） | 方法论专著（本指南）、`GUIDE.md`/`AGENTS.md`/`CLAUDE.md`、agent skills（`.claude/skills/` + `.codex/skills/`，10 角色）、`CHANGELOG.md` | ✅ 直接复制，不含业务实现 |
+| **后端范例** | `examples/backend/` | 独立 Go module（`example-service`，go-zero + GORM + PostgreSQL），完整分层架构（Handler→Logic→DAO→Model）、DAO 接口抽象、配置/部署模板、5 层测试骨架 | 📋 作为范例参考，按需具体化 |
 
-**实施效果**：
-- 设计-代码-测试一致性：95%+
-- 测试覆盖率：UT 60%, API 100%, SIT 95%, UAT 90%
-- 发布成功率：98%+
-- 开发效率：提升 3x
+**默认判断（重要）**：
+- 业务代码改动**一律在 `examples/backend/` 内**进行；主项目根目录不新增业务实现。
+- 除非明确要求，**不要把仓库补全成具体业务系统**——优先保持"模板/原型"属性。
+- 复制为新项目时：保留 `.claude/skills/` 结构 → 替换业务相关模板/配置 → 在 `examples/backend/` 落地真实实现。
+
+> `examples/backend/` 中的设计文档（`docs/design/`）、Scrum 工件（`docs/scrum/`）与测试（`tests/`，含 `@trace` 标注实例化）是方法论的**一次实例化样本**，不是方法论源头；方法论源头在主项目 skills 与本指南。
 
 ### 15.2 成功经验总结
 
@@ -1746,12 +1779,13 @@ Content-Type: application/json
 
 ### D.2 相关文档
 
-🔧 **TODO**: 待补充
-
 **内部文档**：
-- [CLAUDE.md](../CLAUDE.md) - 项目指导文档
-- [GUIDE.md](../GUIDE.md) - 工程实践指南
-- [docs/design/](../design/) - 架构设计文档
+- [CLAUDE.md](../../CLAUDE.md) - 项目指导文档
+- [GUIDE.md](../../GUIDE.md) - 工程实践指南
+- [AGENTS.md](../../AGENTS.md) - 仓库工作指南
+- [CHANGELOG.md](../../CHANGELOG.md) - 项目变更日志
+- [examples/backend/docs/design/](../../examples/backend/docs/design/) - 范例架构设计文档
+- [.claude/skills/qa/references/test_traceability.md](../../.claude/skills/qa/references/test_traceability.md) - 测试可追溯性方法论
 
 **外部文档**：
 - Claude Code 官方文档
@@ -1765,10 +1799,33 @@ Content-Type: application/json
 
 ## 📝 更新日志
 
-| 版本 | 日期 | 变更说明 |
-|------|------|---------|
-| v0.2.0-alpha | 2026-06-12 | 新增用户场景：多工程并行开发（极低心智成本管理多个工程） |
-| v0.1.0-alpha | 2026-04-29 | 初始版本，建立章节框架，填充已知内容 |
+| 版本 | 对应项目版本 | 日期 | 变更说明 |
+|------|------------|------|---------|
+| v0.2.0-alpha | ≥ v2.4 | 2026-07-29 | 对齐 archetype 双层结构、Agent Team 10 角色、5 层测试金字塔（增 E2E）、SIT 交叉验证；新增「与项目 CHANGELOG 同步关系」机制 |
+| v0.1.0-alpha | v2.0~v2.1 | 2026-04-29 | 初始版本，建立章节框架，填充已知内容 |
+
+### 🔗 与项目 CHANGELOG 的同步关系
+
+本指南是仓库的方法论专著，**不独立发版**，而是随仓库 [`CHANGELOG.md`](../../CHANGELOG.md) 的项目版本演进同步迭代。两套版本号的对应关系如下：
+
+| 指南版本 | 触发的项目版本 | 同步内容 |
+|---------|--------------|---------|
+| MAJOR（v0.x → v1.0） | 项目 MAJOR（如 v2 → v3） | 方法论范式变更（角色体系重构、测试金字塔层级调整） |
+| MINOR（v0.1 → v0.2） | 项目 MINOR/MAJOR（如 v2.4） | 新增技能能力（如 v2.4 的 `@trace` 可追溯性）、章节扩充 |
+| PATCH（v0.2.0 → v0.2.1） | 项目 PATCH | 文字修正、链接修复、格式调整 |
+
+**同步触发规则**：
+
+| 项目 CHANGELOG 出现 | 本指南动作 |
+|---------------------|----------|
+| 新增/重构 agent skill（角色体系变化） | 更新 §7.2 / §11.1 角色表，MINOR 版本 +1 |
+| 测试策略变化（金字塔层级、可追溯性） | 更新 §6 测试策略，MINOR +1 |
+| 架构层次/仓库结构调整（如 v2.3 双层落定） | 更新 §15.1 仓库结构，MINOR +1 |
+| 纯文字/链接修正 | PATCH +1 |
+
+**流程卡点**：每次发布项目新版本（写入 `CHANGELOG.md`）时，**同步检查本指南是否需要迭代**——若方法论内容有实质变化而指南未更新，视为文档债，需在同次发布或紧随的 PATCH 中补齐。指南版本号与「对应项目版本」列的对应关系，是衡量文档是否跟上的唯一标尺。
+
+> 反向亦成立：指南的 MAJOR/MINOR 变更，应在项目 `CHANGELOG.md` 的对应版本条目中点名（如 v2.4 的 Added 已记录 qa skill v7.2 同步至 GUIDE/AGENTS；本指南 v0.2 的变更应在项目下一次 CHANGELOG 中点名）。
 
 ---
 

@@ -4,239 +4,136 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Purpose
 
-This is a **prototype project (原型工程)** that demonstrates AI-native project architecture patterns. It is **NOT** a production application.
+这是一个 **AI-Native 原型模板仓库（archetype）**，展示 AI-native 项目的架构形制与方法论，**不是可交付的生产服务**。仓库为**双层结构**：
 
-**Key Characteristics**:
-- ✅ Reference template for architecture patterns
-- ✅ Framework code (interface definitions, data models)
-- ✅ Documentation of best practices
-- ❌ No business logic implementations
-- ❌ Not runnable as a production service
+| 层 | 位置 | 内容 |
+|----|------|------|
+| **主项目根目录** | `/` | 方法论知识库 + agent skills + 通用文档，**不含任何业务实现** |
+| **后端范例** | `examples/backend/` | 自包含、可独立编译的 Go 工程（独立 module `example-service`），完整展示分层架构 |
 
-**Usage**: Copy this project structure as a starting point for new projects, then implement the interfaces defined in `internal/dao/interfaces.go`.
+**默认判断**（重要）：
+- 业务代码改动**一律在 `examples/backend/` 内**进行；主项目根目录不应新增业务实现。
+- 除非用户明确要求，**不要把仓库补全成具体业务系统**，优先保持"模板/原型"属性。
+- 工作前先判断任务落在**主项目**（方法论/skills 维护）还是**范例**（`examples/backend/` 调整）。
 
 ## Development Commands
 
-### Go Development
+⚠️ **所有 Go / Make 工程命令都在 `examples/backend/` 下执行**——主项目根目录已于 v2.3 净化，**无 `go.mod`、无 `Makefile`、无可运行 Go 服务**。
 
 ```bash
-# Run unit tests
-make test
-go test -v ./internal/...
+cd examples/backend
 
-# Format code
-make fmt
+# 编译（独立 module，无需 go.work）
+go build ./...
 
-# Run linter
-make lint
+# Go 单元测试（仅 internal/）
+make test                    # = go test -v --cover ./internal/...
+go test ./internal/...       # 直接跑
+go test -run TestFoo ./internal/dao/...   # 跑单个测试
 
-# Build Linux binary
-make build
-# Or explicitly:
-make build-linux
+# 格式化与 lint
+make fmt                     # = gofmt -s -w .
+make lint                    # = golangci-lint run ...
 
-# Run service locally
-make run
-# Or:
-go run main.go -f etc/config/config.yaml
-
-# Install development tools
-make tools
+# Python 测试（tests/ 下，pytest）
+python -m pytest tests/api -q
+python -m pytest tests/sit -v          # ⚠️ 见下方安全警告
 ```
 
-### Python Testing
+`make build` / `make run` / `make docker` 等目标**视为模板示例**——`run` 依赖 `etc/config/config.yaml`（仓库只提供 `.template`），未填充配置前不可直接执行。
 
-```bash
-# Activate virtual environment (if using uv)
-source .venv/bin/activate
+## Architecture
 
-# Run API tests
-pytest tests/api/ -v
+### 仓库双层结构
 
-# Run SIT tests (requires local K8s environment)
-pytest tests/sit/ -v
+- **主项目根**：方法论（`GUIDE.md`、`docs/guides/`）+ agent skills（`.claude/`、`.codex/`）+ 通用文档。根目录残留的 `etc/`、`tests/` 为配置/测试**框架骨架**，非业务实现。
+- **`examples/backend/`**：独立 Go module（`module example-service`，Go 1.24 + go-zero v1.8.3）。
 
-# Run UAT tests
-pytest tests/uat/ -v
-
-# Generate HTML test report
-pytest tests/ -v --html=test_reports/test_report.html
-```
-
-### Docker & Deployment
-
-```bash
-# Build Docker image
-make docker
-
-# Run local development environment
-cd deploy/docker && docker-compose up -d
-
-# Deploy to test environment (K8s)
-./deploy/scripts/helm-upgrade.sh test snapshot-mr-30
-
-# Deploy to production (K8s)
-./deploy/scripts/helm-upgrade.sh prod V0.1-20260428153000-a1b2c3d
-```
-
-## Architecture Overview
-
-### Layered Architecture
+### 范例分层架构（examples/backend/internal/）
 
 ```
-HTTP Request
-    ↓
-Handler (internal/handler/)  - HTTP request/response handling
-    ↓
-Logic (internal/logic/)      - Business logic
-    ↓
-DAO (internal/dao/)          - Data access abstraction (interface-based)
-    ↓
-Model (internal/model/)      - Data models (GORM entities)
+HTTP Request → Handler → Logic → DAO(接口) → Model
 ```
 
-**Key Principles**:
-- **Interface-based DAO layer**: All data access goes through interfaces defined in `internal/dao/interfaces.go`
-- **Dependency injection**: Components receive dependencies through constructors
-- **Separation of concerns**: Each layer has distinct responsibilities
+- **interface-based DAO**：`internal/dao/interfaces.go` 定义 `...DAOInterface` 抽象，**范例中实现层省略**（实际项目应提供实现并用 `var _ Iface = (*Impl)(nil)` 做编译期断言）。
+- `handler/`、`logic/`、`middleware/`、`pkg/`、`svc/` 为**占位目录**（`.gitkeep`），仅展示分层位置。
+- `model/`：业务实体（Pod 资源、GPU 用量、CMDB）。
 
-### Technology Stack
-
-**Backend**:
-- Go 1.24+
-- go-zero framework (REST API)
-- GORM (ORM)
-- PostgreSQL (database)
-- Kubernetes client-go (K8s integration)
-
-**Testing**:
-- Go testing (unit tests)
-- Pytest (integration/SIT/UAT tests)
-- K8s kind/minikube (SIT environment)
-
-**DevOps**:
-- Docker (containerization)
-- Kubernetes (orchestration)
-- Helm Charts (deployment)
-- GitLab CI (CI/CD)
-
-## Directory Structure
-
-```
-internal/
-├── config/          # Configuration structure definitions
-├── dao/             # Data access layer interfaces (no implementations)
-├── handler/         # HTTP handlers (empty - only .gitkeep)
-├── logic/           # Business logic (empty - only .gitkeep)
-├── model/           # Data models (GORM entities)
-├── middleware/      # HTTP middleware (empty - only .gitkeep)
-├── pkg/             # Utility packages (empty - only .gitkeep)
-├── svc/             # Service context (empty - only .gitkeep)
-└── types/           # Common type definitions
-
-tests/
-├── conftest.py      # Main pytest configuration
-├── api/             # Contract tests (API level)
-├── sit/             # System integration tests
-├── uat/             # User acceptance tests
-└── regression/      # Regression tests
-
-docs/
-├── design/          # Architecture design documents
-├── guides/          # Usage guides
-└── scrum/           # Project management docs
-
-deploy/
-├── docker/          # Docker Compose (local development)
-└── k8s/             # Kubernetes Helm Charts
-
-etc/
-└── config/          # Configuration files (framework only)
-```
+**技术栈**：Go 1.24+ / go-zero / GORM / PostgreSQL / client-go（K8s）。
 
 ## Testing Strategy
 
-This project uses a **four-layer testing pyramid**:
+四层测试金字塔，测试代码位于 `examples/backend/tests/`（pytest，配置 `tests/pytest.ini`）：
 
-| Layer | Type       | Location            | Purpose                          |
-|-------|------------|---------------------|----------------------------------|
-| UT    | Unit tests | `internal/**/*_test.go` | Function-level testing          |
-| API   | Contract   | `tests/api/`        | API contract validation         |
-| SIT   | Integration| `tests/sit/`        | Business flow validation        |
-| UAT   | Acceptance| `tests/uat/`        | User scenario validation        |
+| 层 | 位置 | 性质 |
+|----|------|------|
+| UT | `internal/**/*_test.go` | Go 单元测试，函数级 |
+| API | `tests/api/` | 契约测试 |
+| SIT | `tests/sit/` | 集成测试 |
+| UAT | `tests/uat/` | 验收测试 |
 
-**Coverage Goals**:
-- UT: ≥ 50%
-- API: 100%
-- SIT: ≥ 90%
-- UAT: ≥ 85%
+🚨 **安全警告（务必遵守）**：
+- **SIT / UAT fixture 可能连接真实 Kubernetes 与 PostgreSQL 环境**——未确认环境安全前，**不要把它们当作本地无害测试执行**。
+- **不要随意运行 `tests/uat`**。
+- 不要轻易修改与环境绑定的配置（`etc/config/*.yaml`）。
 
-**Important**: Unit tests (`*_test.go`) are stored alongside code in `internal/`, while integration/SIT/UAT tests are in `tests/` directory.
+范例当前大部分测试内容为骨架。
 
-## Configuration Management
+## Configuration
 
-### Configuration File Locations
+**运行时配置**（`examples/backend/etc/config/`，可变）：
+- `config-local.yaml` / `config-test.yaml` / `config-prod.yaml`（部分为 `.template`）
 
-**Runtime Configuration** (mutable):
-- `etc/config-local.yaml` - Local development
-- `etc/config-test.yaml` - Test environment
-- `etc/config-prod.yaml` - Production environment
+**部署配置**（`examples/backend/deploy/`，不可变镜像）：
+- `docker/docker-compose.yml`（本地）
+- `k8s/helm/...values-test.yaml` / `values-prod.yaml`
 
-**Deployment Configuration** (immutable):
-- `deploy/docker/docker-compose.yml` - Local development
-- `deploy/k8s/helm/project-template/values-test.yaml` - Test environment
-- `deploy/k8s/helm/project-template/values-prod.yaml` - Production environment
+⚠️ `etc/config/*.yaml` **不视为默认可安全复用的本地配置**，可能含环境特定值。
 
-### Config Loading Priority
+**加载优先级**：CLI `-f path` > 环境变量 `CONFIG_FILE` > 默认 `etc/config/config.yaml`。
 
-1. Command-line flag: `-f /path/to/config.yaml`
-2. Environment variable: `CONFIG_FILE=/path/to/config.yaml`
-3. Default: `etc/config/config.yaml`
+## Agent Team Skills
 
-## Key Design Documents
+`.claude/skills/` 下定义了多角色 agent skills，用 `/skill-name` 调用：
 
-When implementing features based on this prototype, reference these documents:
+| Skill | 领域 |
+|-------|------|
+| `arch` | 架构设计 |
+| `dev` | 开发实现 |
+| `qa` | 测试验证（UT/SIT/UAT 策略） |
+| `devops` | 部署运维 |
+| `pm` | 项目管理（Story/Epic/Sprint 编排） |
+| `commit` | 代码提交与 MR |
+| `refactor` | 安全重构 |
+| `sentinel` | 线上巡检 |
+| `spec-xchecker` | Design↔Scrum↔Code↔Tests 四路对齐检查 |
+| `ued` | 前端体验 |
 
-- `docs/design/service_layer_architecture_v4.2.md` - Service layer design
-- `docs/design/cmdb_design_v4.0.md` - Data layer design
-- `docs/design/api_design_v1.3.md` - API design
-- `GUIDE.md` - Engineering practices (testing strategy, deployment pipeline)
+`.codex/skills/` 是对应 Codex agent 的适配层。完整协作流程见 `GUIDE.md`。
+
+## Key Documents
+
+- `GUIDE.md` — AI-Native 开发完整指南（Agent Team 协作、研发流程）⭐ 核心
+- `AGENTS.md` — 仓库工作指南（代理协作约束）
+- `docs/guides/ai_native_development_guide_book.md` — 开发方法论专著
+- `examples/backend/docs/design/` — 范例设计文档（服务层架构、数据层、API 设计）
+- `examples/backend/internal/dao/interfaces.go` — DAO 接口抽象
+
+> 引用 `examples/backend/docs/design/` 下设计文档前，**先确认文件实际存在**（部分为 `.template`）。
 
 ## When Working with This Codebase
 
-### For Learning Architecture
-- Read interface definitions in `internal/dao/interfaces.go`
-- Study data models in `internal/model/`
-- Review design documents in `docs/design/`
-
-### For Creating New Projects
-1. Copy this project structure
-2. Implement DAO interfaces from `internal/dao/interfaces.go`
-3. Add handlers in `internal/handler/`
-4. Add business logic in `internal/logic/`
-5. Fill in configuration values in `etc/config/`
-6. Write tests following the four-layer strategy
-
-### Important Constraints
-
-- **DO NOT** add business logic implementations to this prototype project
-- **DO NOT** modify framework code in `internal/` without understanding the architecture
-- **DO** use this as a reference for understanding AI-native project patterns
-- **DO** copy the structure when creating new projects
-
-## Team Skills
-
-The `.claude/skills/` directory contains team skill definitions for various roles:
-- `arch/` - Architecture skills
-- `commit/` - Git commit and MR creation
-- `dev/` - Development workflow
-- `devops/` - DevOps operations
-- `qa/` - Testing strategy
-- `pm/` - Project management
-
-Use these skills with the `/skill` command when working on specific tasks.
+- **业务代码**：只在 `examples/backend/` 内。主项目根目录不新增业务实现。
+- **PR 说明**需明确：改动是否仍"模板安全"、影响主项目还是范例、做了哪些验证、是否仍有占位符/外部依赖/环境风险。
+- **提交风格**：Conventional Commits（`fix(skills): ...`、`feat(guide): ...`、`docs(examples): ...`），带作用域。
+- **未经确认**，不主动运行可能访问真实外部环境（K8s/PG）的测试或脚本。
 
 ## Version History
 
-- **v2.0** (2026-04-28): De-implementation refactor - removed all business logic, kept only framework
-- **v1.0** (2026-02-04): Initial version
+- **v2.3** (2026-07-17): examples/backend 范例搬迁落定，主项目彻底净化为 archetype（MR !3）
+- **v2.2** (2026-06-16): 技能质量修复（spec-xchecker 运行时静默失效修复、pm DEFERRED 状态）
+- **v2.1** (2026-06-12): 技能生态增强（Codex 适配、9 skills 产品化、UED/spec-xchecker/sentinel/refactor 新增、4 轮脱敏）
+- **v2.0** (2026-04-28): 去实现化重构（移除业务逻辑实现，仅保留框架）
+- **v1.0** (2026-02-04): 初始版本
+
+> 完整变更见 `CHANGELOG.md`。

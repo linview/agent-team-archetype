@@ -5,8 +5,8 @@
 **目标读者**: 已了解 AI-Native 开发理念，希望快速使用原型工程进行开发的人
 **前置阅读**: 如需了解 AI-Native 开发理念和方法论，请参阅 [AI-Native Development Guide Book](docs/guides/ai_native_development_guide_book.md)
 
-**版本**: v2.0
-**更新日期**: 2026-04-29
+**版本**: v2.5
+**更新日期**: 2026-07-30
 
 ---
 
@@ -864,6 +864,77 @@ pytest tests/uat/ -v --html=test_reports/uat-report.html
 
 **UAT 测试覆盖目标**: ≥ 85%
 
+### 4.5 测试可追溯性与设计漂移检测
+
+**目的**:让测试集随设计迭代**新陈代谢**——每个用例记录"创建时对应的 design 版本",设计演进时由漂移检测器自动暴露过期用例,由 review 决定 update / retire / add。
+
+这是 **Design↔Test 维度的 review 闭环**,与 `/spec-xchecker` 互补:spec-xchecker 做"AC 是否有测试覆盖"的静态对齐,漂移检测做"测试是否还跟得上当前设计版本"的时间维巡检。
+
+#### 4.5.1 用 `@trace` marker 标注追溯信息
+
+测试与需求/设计是 **N:M 关系**(一个测试可验证多个 AC,一个 AC 可被多个测试覆盖)。本项目把追溯拆成**两个正交维度**,各管一件事:
+
+| 维度 | 回答的问题 | 载体 |
+|---|---|---|
+| **定位符**(空间·查阅) | "这测试对应哪个可追溯实体?" | `story` / `epic` / `endpoint` 三选一 |
+| **版本化源锚**(时间·漂移) | "这测试依据哪个版本的设计写的?" | `design="<doc>_vX.Y#<章节>"` |
+
+```python
+# tests/sit/test_source_map.py
+@pytest.mark.trace(
+    story="STORY-6-02",                                     # 定位符(三选一)
+    ac="SIT",                                              # 层归属(必填): API|SIT|E2E|UAT(UT 不用 @trace)
+    design="service_layer_architecture_v4.2#查询路由策略",   # 版本化源锚
+)
+def test_source_map_app_trace():
+    ...
+```
+
+**关键规则**:
+
+- **一测一主功能锚**:定位符 `story`/`epic`/`endpoint` **有且仅有一个**——约束功能维度,不约束 AC 层维度(一个测试可同时为 `[API]`+`[SIT]` 提供 AC 证据,这是复用,不是 smell)。
+- **源锚是历史快照,不是当前目标**:`@trace(design=...)` 记录"本用例当初针对哪个版本编写",一旦写入**不随设计变动自动更新**;`Story.design_docs` 才是"当前应达到的版本"。两者时态不同——pin 版本与当前版本之差,正是**漂移信号**。
+- **层 ↔ 锚对角映射**(默认心智模型,非完备检查表):
+
+| 层 | 定位符 | 版本化源锚 |
+|---|---|---|
+| UT | 代码符号 | —(UT 不走 `@trace`;符号即锚,追溯交 spec-xchecker CT 层) |
+| API | `endpoint` | `api_design_vX.Y#<章节>` |
+| SIT | `story` | `service_layer_architecture_vX.Y#<章节>` |
+| E2E / UAT | `epic` | Epic 自身即 PRD 源锚 |
+
+> 完整方法论(时态论证、非对角测试规则、能力边界)见 [.claude/skills/qa/references/test_traceability.md](.claude/skills/qa/references/test_traceability.md)。
+
+#### 4.5.2 漂移检测(定期分层 review 的固定步骤)
+
+```bash
+# 纯静态扫描:不开 pytest、不连 PG/K8s,环境安全
+python .claude/skills/qa/scripts/trace_drift.py \
+  --test-dir examples/backend/tests \
+  --design-dir examples/backend/docs/design \
+  --scrum-dir examples/backend/docs/scrum
+# → 报告输出 test_reports/trace_drift_report.md(遵循全局临时文件规范)
+```
+
+| 态 | 触发条件 | review 动作 |
+|---|---|---|
+| ✅ **同步** | pin 版本 == 当前版本,且章节仍在 | 无需动作 |
+| ⚠️ **版本漂移** | pin < 当前(design 已演进) | 复核内容是否仍有效 → UPDATE / RETIRE |
+| ⚠️ **章节漂移** | pin == 当前,但章节重排 / 改名 / 删除 | 重对齐锚 → UPDATE |
+| 🔴 **悬空** | doc 族消失,或 story 状态 = CANCELLED | RETIRE(用例随 story / 文档退役) |
+
+**定位**:`@trace` 是 **review 工具,不是 MR 门禁**——pm 的 Story 状态门禁仍按 AC 签字率判断,不按 `@trace` 覆盖率。建议在 design 版本演进 / 章节重排 / story 退役时运行一次,看到漂移信号后做 design↔test 内容 review。
+
+#### 4.5.3 在新项目落地(三步)
+
+1. **注册 marker**:在项目 `tests/pytest.ini` 的 `[pytest]` `markers =` 块加一行(取自 [.claude/skills/qa/assets/pytest_trace_marker.ini.snippet](.claude/skills/qa/assets/pytest_trace_marker.ini.snippet))。
+2. **放框架代码**:把 [.claude/skills/qa/assets/trace_framework.py](.claude/skills/qa/assets/trace_framework.py) 复制到项目(如 `tests/trace_framework.py`)。
+3. **挂收集期校验**:在 `tests/conftest.py` 接入 `validate_trace_items`(默认 warning,`TRACE_STRICT=1` 升为收集 fail)。
+
+> `examples/backend/` 已是实例化范本:`tests/pytest.ini`(marker 注册)、`tests/conftest.py`(校验接入)、`tests/_examples/test_trace_example.py`(规范示例,不在 `testpaths`,零回归污染)。
+
+---
+
 ### Part 4 常见问题
 
 **Q: 四层测试（UT/API/SIT/UAT）分别测什么？**
@@ -877,6 +948,9 @@ A: SIT 测试需要 K8s 集群或 Docker Compose 环境。使用 Docker Compose 
 
 **Q: 如何让 QA agent 自动生成测试策略？**
 A: 使用 `/qa` skill，提供 Story 文件路径（如 `docs/scrum/story/story-15-25.md`），QA 会基于验收标准自动生成测试计划和用例。
+
+**Q: 测试用例的注释/marker 里要不要写明对应的需求/设计出处？**
+A: 要，但用结构化的 `@pytest.mark.trace` marker 承载，而非散落在注释里。两个维度：**定位符**（`story`/`epic`/`endpoint` 三选一）回答"测的是哪个功能点"；**版本化源锚**（`design="<doc>_vX.Y#<章节>"`）回答"依据哪个版本的设计写的"。源锚是**历史快照**（不随设计自动更新），设计演进时由 `trace_drift.py` 检测漂移，由 review 决定用例去留。详见 [4.5 节](#45-测试可追溯性与设计漂移检测)。
 
 ---
 
@@ -1051,6 +1125,8 @@ MR 必须包含：
 - 逻辑一致性：业务逻辑是否在 Code 和 Test 中正确实现
 - 数据一致性：数据模型是否在 Code 和 Test 中正确使用
 - 验收一致性：验收标准是否在 Test 中覆盖
+
+**Design↔Test 漂移检测**（与 spec-xchecker 互补）：spec-xchecker 做"AC 是否有测试覆盖"的静态对齐；`trace_drift.py` 做"测试是否还跟得上当前设计版本"的时间维巡检。两者搭配覆盖**对齐 + 漂移**两个维度，详见 [Part 4.5](#45-测试可追溯性与设计漂移检测)。
 
 ### 6.3 Design 版本管理
 
@@ -1574,10 +1650,10 @@ pytest tests/ -v --html=test_reports/report.html
 
 ### 实践案例
 
-- **[MR !41 示例](https://git.example.com/example-org/resource-meter/-/merge_requests/41/diffs)** - 包含设计、代码、测试的完整 MR
+- **[MR !41 示例](https://git.example.com/example-org/example-service/-/merge_requests/41/diffs)** - 包含设计、代码、测试的完整 MR
 
 ---
 
-**最后更新**: 2026-04-29
-**版本**: v2.0
+**最后更新**: 2026-07-29
+**版本**: v2.4
 **维护者**: AI-Native Development Team
