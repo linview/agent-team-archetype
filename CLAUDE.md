@@ -18,7 +18,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Development Commands
 
-⚠️ **所有 Go / Make 工程命令都在 `examples/backend/` 下执行**——主项目根目录已于 v2.3 净化，**无 `go.mod`、无 `Makefile`、无可运行 Go 服务**。
+⚠️ **所有 Go / Make 工程命令都在 `examples/backend/` 下执行**——主项目根目录**无 `go.mod`、无 `Makefile`、无可运行 Go 服务**。
 
 ```bash
 cd examples/backend
@@ -130,10 +130,7 @@ HTTP Request → Handler → Logic → DAO(接口) → Model
 
 ## Version History
 
-- **v2.3** (2026-07-17): examples/backend 范例搬迁落定，主项目彻底净化为 archetype（MR !3）
-- **v2.2** (2026-06-16): 技能质量修复（spec-xchecker 运行时静默失效修复、pm DEFERRED 状态）
-- **v2.1** (2026-06-12): 技能生态增强（Codex 适配、9 skills 产品化、UED/spec-xchecker/sentinel/refactor 新增、4 轮脱敏）
-- **v2.0** (2026-04-28): 去实现化重构（移除业务逻辑实现，仅保留框架）
-- **v1.0** (2026-02-04): 初始版本
+- **v0.3.0** (2026-08-08): 确立原型模板形制。仓库为双层结构——主项目根目录承载方法论与 agent skills,业务实现范例集中在 `examples/backend/`(独立 Go module `example-service`)。
+- **Pre-release** (2026-04-29 ~ 2026-08-08): 仓库初始化与 skills 演进阶段,详见 `CHANGELOG.md` 与 `git log`。
 
 > 完整变更见 `CHANGELOG.md`。

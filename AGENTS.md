@@ -30,11 +30,11 @@
 - `etc/config/`：运行时配置框架（`*.yaml.template` + 范例配置）
 - `deploy/`：部署模板（Docker Compose + Kubernetes Helm Charts）
 - `tests/`：测试骨架（api / sit / uat / regression，pytest）
-- `docs/`：业务设计文档与 scrum 管理文档
+- `docs/`：业务设计文档（`docs/design/`）
 - `Makefile`、`pyproject.toml`、`.gitlab-ci.yml`、`go.mod`、`main.go`：构建、依赖与入口
 
 需要注意的真实状态：
-- 业务实现已整体搬迁至 `examples/backend/`，主项目根目录**不再包含**任何 Go 代码或业务逻辑。
+- 主项目根目录**不包含**任何 Go 代码或业务逻辑；所有业务实现集中在 `examples/backend/`。
 - `examples/backend/internal/dao/interfaces.go` 仅定义接口；具体的 DAO 实现类型在本范例中省略（实际项目应在此提供实现并通过编译期断言 `var _ Iface = (*Impl)(nil)` 校验）。
 - `examples/backend/internal/handler`、`svc`、`logic` 为占位目录，范例仅展示服务骨架与数据层。
 

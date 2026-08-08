@@ -226,33 +226,22 @@ cd my-new-project
 
 ## 📝 更新日志
 
-### v2.1 (2026-07) - 工程范例化
+### v0.3.0 (2026-08-08) - 原型模板形制
 
-**重大变更**：
-- ✅ 后端工程代码整体搬迁至 `examples/backend/`，作为完整后端架构范例
-- ✅ 主项目根目录纯净化：仅保留方法论、agent skills、通用文档
-- ✅ 业务文档（design/scrum）随范例搬迁；`docs/guides/`（方法论）保留主项目
-- ✅ 范例脱敏为 `example-service`（保留 GPU/Pod/CMDB 业务领域示范）
+**仓库结构**：
+- ✅ 双层形制:主项目根目录承载方法论与 agent skills,业务实现范例集中在 `examples/backend/`(独立 Go module `example-service`)
+- ✅ 范例覆盖:分层架构、DAO 接口、数据模型、配置/部署模板、测试框架
+- ✅ 11 个 agent skills(`.claude/skills/` + `.codex/skills/` 适配层)
 
 **主项目根目录现状**：
-- 通用文档：README / GUIDE / AGENTS / CLAUDE / CHANGELOG
-- agent skills：`.claude/`、`.codex/`
-- 方法论：`docs/guides/`
-- 范例：`examples/backend/`（独立 Go module）
+- 通用文档:README / GUIDE / AGENTS / CLAUDE / CHANGELOG
+- agent skills:`.claude/`、`.codex/`
+- 方法论:`docs/guides/`
+- 范例:`examples/backend/`(独立 Go module)
 
-### v2.0 (2026-04-28) - 去实现化改造
-
-**重大变更**：
-- ✅ 移除所有业务逻辑实现（保留接口定义）
-- ✅ 移除所有测试用例（保留测试框架）
-- ✅ 精简配置文件（保留配置框架）
-- ✅ 更新文档说明（明确原型工程定位）
-
-### v1.0 (2026-02-04) - 初始版本
+> 完整变更见 [CHANGELOG.md](CHANGELOG.md)。
 
 ---
 
-**版本**: v2.1
-**创建日期**: 2026-02-04
-**最后更新**: 2026-07-02
-**状态**: 原型工程（主项目方法论 + examples/backend 范例）
+**版本**: v0.3.0
+**状态**: 原型工程(主项目方法论 + examples/backend 范例)
