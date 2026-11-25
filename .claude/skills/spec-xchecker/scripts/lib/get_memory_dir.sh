@@ -13,8 +13,8 @@ get_memory_dir() {
     local project_dir="${1:-${CLAUDE_PROJECT_DIR:-$(pwd)}}"
 
     # 将项目路径转换为 Claude memory 目录路径
-    # /home/mini/Proj/llv/{PROJECT_NAME}
-    # → ~/.claude/projects/-home-mini-Proj-llv-{PROJECT_NAME}/memory
+    # /home/user/Projects/{PROJECT_NAME}
+    # → ~/.claude/projects/-home-user-Projects-{PROJECT_NAME}/memory
 
     # 去掉开头的 /
     local encoded_path="${project_dir#/}"
