@@ -98,14 +98,14 @@ HTTP Request → Handler → Logic → DAO(接口) → Model
 
 | Skill | 领域 |
 |-------|------|
-| `arch` | 架构设计 |
+| `arch` | 架构设计（设计变更三步流程、文档治理纪律） |
 | `dev` | 开发实现 |
 | `qa` | 测试验证（UT/SIT/UAT 策略） |
 | `devops` | 部署运维 |
 | `pm` | 项目管理（Story/Epic/Sprint 编排） |
 | `commit` | 代码提交与 MR |
 | `refactor` | 安全重构 |
-| `sentinel` | 线上巡检 |
+| `sentinel` | 线上巡检（声明驱动引擎，wizard 接入） |
 | `spec-xchecker` | Design↔Scrum↔Code↔Tests 四路对齐检查 |
 | `ued` | 前端体验 |
 
@@ -130,6 +130,7 @@ HTTP Request → Handler → Logic → DAO(接口) → Model
 
 ## Version History
 
+- **v2.12.0** (2026-11-25): Agent Skills 体系升级——arch 设计文档治理（设计变更三步流程、成稿自检脚本）、sentinel 声明驱动引擎化重构、pm/qa/commit 流程细则;仓库采用 MIT 许可证。
 - **v0.3.0** (2026-08-08): 确立原型模板形制。仓库为双层结构——主项目根目录承载方法论与 agent skills,业务实现范例集中在 `examples/backend/`(独立 Go module `example-service`)。
 - **Pre-release** (2026-04-29 ~ 2026-08-08): 仓库初始化与 skills 演进阶段,详见 `CHANGELOG.md` 与 `git log`。
 
