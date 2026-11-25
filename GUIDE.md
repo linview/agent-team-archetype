@@ -5,8 +5,8 @@
 **目标读者**: 已了解 AI-Native 开发理念，希望快速使用原型工程进行开发的人
 **前置阅读**: 如需了解 AI-Native 开发理念和方法论，请参阅 [AI-Native Development Guide Book](docs/guides/ai_native_development_guide_book.md)
 
-**版本**: v2.5
-**更新日期**: 2026-07-30
+**版本**: v2.6
+**更新日期**: 2026-11-26
 
 ---
 
@@ -44,12 +44,12 @@ AI-Native 开发基于**多角色 AI Agent 协作**模式，每个 Agent 承担�
 
 | 角色 | 技能 | 主要职责 | 输出 |
 |------|------|---------|------|
-| **架构师** | `/arch` | 系统架构设计、技术选型、设计文档审查 | Design Doc (HLD) |
+| **架构师** | `/arch` | 系统架构设计、技术选型、设计文档治理与审查、设计变更论证 | Design Doc (HLD) |
 | **项目经理** | `/pm` | Story 拆解、排期规划、SDD 生成、进度跟踪 | SDD + 行动计划 |
 | **开发者** | `/dev` | 代码实现、单元测试、API 测试、本地自测 | Code + UT + API Tests |
 | **质量工程师** | `/qa` | SIT/UAT 测试、质量保障、测试覆盖率分析 | Test Report |
 | **运维工程师** | `/devops` | 发布计划、环境搭建、监控告警、回滚执行 | Deployment Plan |
-| **哨兵** | `/sentinel` | 定期巡检、回归测试、性能分析、健康检查 | Health Report |
+| **哨兵** | `/sentinel` | 声明驱动引擎巡检、回归测试、性能分析、健康检查 | Health Report |
 
 ### 协作流程图
 
@@ -561,7 +561,26 @@ mkdir -p docs/design
 
 # 查看设计文档
 cat docs/design/cmdb_design_v4.0.md
+
+# 设计文档成稿自检（exit ≠ 0 不得定稿）
+python .claude/skills/arch/scripts/doc_structure_check.py docs/design/cmdb_design_v4.0.md
 ```
+
+**设计变更分级（v2.6 起）**：/arch 按假设驱动对设计变更分级——无未实证关键假设的变更（文案修正、参数调整、既有模式微调）直接走文档更新流程；含未实证关键假设的变更（架构假设、技术选型、外部依赖行为）走三步流程：先在 `docs/analysis/` 以分析文档演进动议（状态：research → proposal → adopted），经 POC 论证假设后再升版正式设计。
+
+```mermaid
+flowchart LR
+    A[设计变更触发] --> B{含未实证<br/>关键假设?}
+    B -- 否 --> F[文档更新流程<br/>直接升版]
+    B -- 是 --> C["① analysis 文档<br/>动议演进至 proposal"]
+    C --> D["② POC 论证<br/>假设逐条 pass/fail"]
+    D -- 全 pass --> E["③ Design 升版<br/>证据迁入 analysis/poc_*"]
+    D -- 有 fail --> C
+    E --> G[pm 拆实现 Story]
+    F --> G
+```
+
+> **图：/arch 设计变更分级与三步流程**——细则见 `.claude/skills/arch/references/design_iteration_sop.md`，分析文档模板见 `.claude/skills/arch/templates/analysis_doc_template.md`
 
 ### 2.2 使用 /pm 拆解 Story
 
@@ -1159,10 +1178,27 @@ vim docs/design/cmdb_design_v4.2.md
 # 确保三域对齐
 ```
 
+**版本记录单一权威（v2.6 起）**：版本信息写在文档头部 frontmatter（`version` / `version_notes` / `version_history`），正文不再保留版本历史表；文件名、frontmatter、正文 H1 尾注三处版本号必须一致，不一致由自检脚本拦截。
+
 ### Part 6 常见问题
 
 **Q: 如何执行线上巡检？**
-A: 使用 `/sentinel` skill 或直接运行 `./.claude/skills/sentinel/scripts/inspect <level> <env>`。支持 smoke（冒烟）、sanity（健全）、full（完整）三个级别，默认 sanity。环境支持 dev/test/prod，默认 test。
+A: 使用 `/sentinel` skill。首次使用进入 wizard 引导式接入（四步流程：选模式 → 声明巡检目标 → 选探针 → 生成 YAML 声明），声明由确定性引擎执行；后续用 `/sentinel register <name>.yaml` 直接注册新哨兵。声明存放在 `.claude/sentinel.d/*.yaml`，探针覆盖 HTTP 探测、API 查询、API 冒烟、数据库查询、日志检索、指标抓取、调度存活 7 类，数据源工具含 PostgreSQL 与 MySQL。详见 `.claude/skills/sentinel/SKILL.md`。
+
+```mermaid
+flowchart LR
+    U[使用者] --> W{首次使用?}
+    W -- 是 --> WI[wizard 引导接入<br/>四步流程]
+    W -- 否 --> R["/sentinel register<br/>注册声明"]
+    WI --> Y[YAML 声明<br/>.claude/sentinel.d/]
+    R --> Y
+    Y --> E[sentinel_engine 确定性引擎]
+    E --> P["探针 7 类<br/>HTTP/API/DB/日志/指标/调度"]
+    P --> T["数据源工具<br/>pg / mysql fetcher"]
+    E --> RP[报告生成<br/>含凭据不泄漏守卫]
+```
+
+> **图：sentinel 声明驱动巡检链路**——wizard 只在 onboarding 跑一次，产出声明后由 `sentinel_engine` 引擎执行，不进定时巡检链路。
 
 **Q: Design Spec 更新后，旧 Story 怎么处理？**
 A: 遵循 Design Spec 演进规则：已完成工作保留（COMPLETED 不可篡改），进行中的 Story 标记 BLOCKED 并更新引用。详见 `.claude/skills/pm/SKILL.md` 中的 Design Spec 演进规则。
@@ -1643,9 +1679,11 @@ pytest tests/ -v --html=test_reports/report.html
 
 ### Agent Skills
 
-- **[.claude/skills/arch/SKILL.md](.claude/skills/arch/SKILL.md)** - 架构师技能
+- **[.claude/skills/arch/SKILL.md](.claude/skills/arch/SKILL.md)** - 架构师技能（设计变更三步流程见 `references/design_iteration_sop.md`，文档纪律见 `references/doc_readability_guide.md`，图表指南见 `references/diagram_guide.md`）
 - **[.claude/skills/dev/SKILL.md](.claude/skills/dev/SKILL.md)** - 开发者技能
-- **[.claude/skills/qa/SKILL.md](.claude/skills/qa/SKILL.md)** - QA 技能
+- **[.claude/skills/qa/SKILL.md](.claude/skills/qa/SKILL.md)** - QA 技能（测试分类学细则见 `references/test_taxonomy.md`）
+- **[.claude/skills/pm/SKILL.md](.claude/skills/pm/SKILL.md)** - 项目管理技能（Issue 管理与发布版本细则见 `references/`）
+- **[.claude/skills/sentinel/SKILL.md](.claude/skills/sentinel/SKILL.md)** - 哨兵技能（声明驱动引擎见 `scripts/sentinel_engine/`）
 - **[.claude/skills/devops/SKILL.md](.claude/skills/devops/SKILL.md)** - DevOps 技能
 
 ### 实践案例
@@ -1654,6 +1692,6 @@ pytest tests/ -v --html=test_reports/report.html
 
 ---
 
-**最后更新**: 2026-07-29
-**版本**: v2.4
+**最后更新**: 2026-11-26
+**版本**: v2.6
 **维护者**: AI-Native Development Team
