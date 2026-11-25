@@ -1,0 +1,41 @@
+# wizard 模式 C:数据-DB integrity/USE(wizard_onboarding_v1.2 §4)
+# 适用:PostgreSQL / Redis / 对象存储
+# 推荐探针:db_query(行数/口径)+ metrics_scrape(USE 饱和度)
+# SRE 对齐:USE(Utilization / Saturation / Errors)
+#
+# 首次配置:Claude 按 SKILL.md wizard 引导,把 <占位> 替换为真实 target / 判据,
+# 另存为 .claude/sentinel.d/<name>.yaml,再 `sentinel register <name>.yaml`。
+# db_query 只读白名单(§12.2):仅 SELECT/WITH 通过,写操作 fail-fast 不连库。
+# fetcher(执行 SQL):PG/MySQL 用 skill 自带只读 fetcher(v1.6),声明 params.fetcher 引用:
+#   fetcher: .codex/skills/sentinel/scripts/sentinel_engine/tools/pg_fetcher.py   # .codex 栈换 .codex 前缀
+#   (MySQL 用 mysql_fetcher.py;其他数据源 export SENTINEL_DB_FETCHER=<wrapper>)
+# 凭据(§12.1):在 .env.skill 建 [db] section(最小权限只读账号),注入
+# DB_HOST/DB_PORT/DB_NAME/DB_USER/DB_PASSWORD(DB_NAME 必填,无默认);
+# 本声明 credentials.db 填 section 名,值绝不写进 yaml。
+schema_version: 1
+sentinel: data_db
+schedule: "0 */6 * * *"
+description: "模式 C 数据-DB:行数口径 + USE 饱和度"
+credentials:
+  db: db   # .env.skill [db] section(只读凭据)
+probes:
+  - type: db_query
+    target: "db://<DB_NAME>"
+    params:
+      fetcher: .codex/skills/sentinel/scripts/sentinel_engine/tools/pg_fetcher.py
+      sql: "SELECT count(*) AS row_total FROM <TABLE>"
+      columns: [row_total]
+      requires_env: [DB_HOST, DB_NAME, DB_USER, DB_PASSWORD]
+    assert:
+      op: expect_ge
+      value: row_total
+      min: 1   # 占位:数据量下限,按业务口径调
+  - type: metrics_scrape
+    target: http://<DB_EXPORTER_HOST>:<PORT>/metrics
+    params:
+      queries:
+        saturation: pg_stat_activity_count
+    assert:
+      op: expect_le
+      value: saturation
+      max: 100   # 占位:连接/饱和上限,按库容量调

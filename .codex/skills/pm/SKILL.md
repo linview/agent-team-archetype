@@ -1,9 +1,7 @@
 ---
 name: "pm"
 description: "PM 编排技能 — 具备意图识别与动态路由能力的项目管理中枢。除了 pm 的全部 Story/Epic/Sprint 管理能力外，pm 能分析用户 prompt 的多领域意图，动态匹配所需的专业 skill（arch/dev/ued/qa/devops 等），生成编排计划并在用户确认后依次唤起各 skill 协同工作。当用户的请求涉及多个专业领域、需要跨 skill 协调、或者用户希望用一个 prompt 驱动完整的「设计→实现→验证」流程时，使用此技能。纯 Story 管理/迭代规划等单领域任务，pm 会直接处理而不路由。"
-metadata:
-  original-skill: "pm"
-  version: "14.0-exp"
+version: "14.6"
 ---
 
 # PM 编排技能手册
@@ -37,10 +35,11 @@ metadata:
 - ❌ 不要在开发未完成时就创建 MR
 - ❌ **没有 Story 就指派 Developer 工作**（铁律）
 
-**Story 先行铁律**：PM 三不派：
+**Story 先行铁律**：PM 四不派：
 1. **无 Story 不派工**：必须先有 `{project_docs}/scrum/story/story-*.md`
 2. **无 AC 不派工**：Story 必须有验收标准
 3. **无 Design 引用 不派工**：Story 必须引用 design spec
+4. **Design 未定稿不派实现 Story**：design 状态为 `⏳ 待 POC`（或 `{project_docs}/analysis/` 下存在 status 为 proposal 的文档）时，只可立 POC Story，不拆实现 Story——排期必须基于已实证的设计
 
 禁止：跳过 Story 直接写实现计划、口头描述代替 Story、让 Developer 自己选 Story。
 
@@ -64,10 +63,17 @@ metadata:
 ## 工作流程
 
 ### 1. 方案设计阶段
-1. 阅读 `{project_docs}/design/` 下的设计文档（参考 `.codex/skills/arch/SKILL.md`）
-2. 识别 Epic 和关键 Story
-3. 估算工时和依赖关系
-4. 创建 `{project_docs}/scrum/prd/epic-*.md`
+1. 阅读 `{project_docs}/design/` 下的设计文档（参考 arch skill「设计文档规范」）
+2. **检查 design 状态与 analysis proposal 状态**（设计变更三步流程的 pm 侧入口）：
+   - design 元数据 Status 为 `⏳ 待 POC`，或 `{project_docs}/analysis/` 下存在 status 为 proposal 的文档 → **不拆实现 Story**（四不派第 4 条），进入 proposal 评估
+   - 评估 proposal 文档的 POC 路径建议（重路径/轻路径，见 arch skill「设计变更三步流程」）：
+     - **重路径**：假设复杂/多切片 → 立独立 POC Story（见「POC Story 类型」），POC 全 pass 且 design 升定稿后再拆实现 Story
+     - **轻路径**：单点假设快速实验可覆盖 → 放行快速实验（结果落 `test_reports/`），追踪其结论回流 design 后再排期
+3. 识别 Epic 和关键 Story
+4. 估算工时和依赖关系
+5. 创建 `{project_docs}/scrum/prd/epic-*.md`
+
+**与 Design Spec 演进规则的分工**：本环节管"design 定稿前"（含未实证假设的 proposal→POC→定稿门槛）；「Design Spec 演进规则」管"design 发布后"（版本演进对存量 Story 的处置）。衔接点是 design update 完成、新版本生效之时。
 
 ### 2. Story 拆解阶段
 1. 将 Epic 拆解为具体 Story
@@ -98,6 +104,22 @@ PM 编写 AC 时必须：
 - 最小单元：1-3 个工作日
 - 最大单元：1 个 Sprint（2 周）
 - 推荐粒度：2-5 个工作日
+
+**POC Story 类型**（设计变更三步流程重路径的交付单元）：
+
+当 design 含未实证关键假设（`⏳ 待 POC`）时，PM 立独立 POC Story 交 dev 执行 spike。POC Story 与实现 Story 的区别：
+
+| 维度 | POC Story | 实现 Story |
+|------|-----------|-----------|
+| 目标 | 验证设计假设成立（论证） | 交付功能（实现） |
+| AC 形态 | 假设表逐条 pass/fail + 证据 | 功能验收标准 |
+| tags | `["poc", "spike", "gate"]` | 常规功能 tags |
+| 代码去向 | 实验过程落 `test_reports/poc/{topic}/`（gitignored 不入库）；侵入式验证才开 worktree，**改动不合并 main** | MR 合并主干 |
+| 结论产出 | 结论报告 + 关键证据迁入 `{project_docs}/analysis/poc_{topic}/`（design update 时精选入库） | 功能代码 + 测试 |
+
+**gate review 要求**：POC Story 必须独立角色签字（不得开发者自验跳过 IN_REVIEW）——按对抗性反事实核验假设是否真被论证，重点检查 pass 判据是否同义反复（判据从方案反推则结构性不可失败，STORY-1-01 先例的 H3 教训）。全 pass → 交 arch 升版 design 定稿；有 fail → 回 analysis 文档修订（proposal 状态）。
+
+**先例参考**：完整 POC Story 结构（frontmatter tags、review_note 纠错记录、二次 review 签字）见仓库 `docs/scrum/story/story-1-01-poc-spike.md`（sentinel design §14 的 POC spike）。
 
 ### 3. Sprint 规划阶段
 1. 选择优先级最高的 Story
@@ -153,6 +175,67 @@ PM 编写 AC 时必须：
 3. 更新 Story 状态为 COMPLETED
 4. 规划下一 Sprint
 
+### 6. 发布版本规划（⚠️ pm 职权）
+
+PM 负责总体研发过程管理与**最终发布版本号规划**——定版决策权在 pm,其他角色(dev/commit/devops)执行发布但不决定版本号。
+
+**第一性原则**:版本号由**当前发布内容相对上一轮 release 的变更粒度**决定(遵循 [semver 2.0.0](https://semver.org/)),不由日程、心情或单条 commit 的表面大小决定。
+
+**版本类型判定**(按发布内容整体判定,就高不就低):
+
+| 发布内容(相对上一轮 release) | 版本类型 | 示例 |
+|------|---------|--------|
+| 破坏性变更:对外交付物不兼容(库 API/CLI 命令/服务契约/能力语义变更) | MAJOR | v2.7.0 → v3.0.0 |
+| 向后兼容的新能力(新功能/新模块/新接入) | MINOR | v2.7.0 → v2.8.0 |
+| 缺陷修复/文档修正/纯内部整理(无新能力) | PATCH | v2.7.0 → v2.7.1 |
+
+**定版流程**:
+1. 收集本版发布内容:自上一 release 以来的全部已合并变更(MR/Story 收口清单/commit log)
+2. 按判定表定版本号;CHANGELOG 按 [Keep a Changelog](https://keepachangelog.com/) 定版:`## [Unreleased]` → `## [vX.Y.Z] - YYYY-MM-DD`,历史版本头分节完整
+3. 触发本工程的发布流程(执行方按工程自有发布机制;pm 不绑定具体脚本)
+4. 发布后验证:产物完整性/门禁证据/内容抽查
+
+**禁止事项**:
+- ❌ 发布执行者自行定版(应暂停并找 pm 确认)
+- ❌ CHANGELOG 存在未定版头(`[Unreleased]`)时触发依赖版本号解析的发布流程
+- ❌ 版本类型误判(新能力定 PATCH、破坏性变更定 MINOR 都是版本债)
+
+> 0.y.z 初始开发期、pre-release/build metadata、版本粒度收集细则与定版 checklist:见 [release_versioning.md](references/release_versioning.md)
+
+---
+
+## 项目管理图表（进度可视化）
+
+> 承接 /arch 转介：体现项目进度/排期/归因的图表（甘特图/鱼骨图/燃尽图/燃起图）由 pm 负责；arch 只做系统方案/宏观设计概念图。
+
+### 图表选型
+
+| 图类型 | 用途 | 首选表达 | 说明 |
+|--------|------|---------|------|
+| 甘特图 | Sprint 排期、里程碑、任务依赖 | mermaid `gantt` | mermaid 原生支持，GitLab/GitHub 渲染可靠 |
+| 燃尽图/燃起图 | Sprint 剩余/累计工作量趋势 | markdown 表格（迭代日 × SP）+ 趋势结论 | mermaid 无原生燃尽图；渲染环境 mermaid ≥ 10.9 时可用 `xychart-beta` 折线 |
+| 鱼骨图 | 延期/质量问题归因分析 | mermaid `flowchart LR` 模拟（鱼头=问题，主刺=类别，小刺=原因） | mermaid 无原生鱼骨；结构简单时 ASCII 亦可 |
+
+### 甘特图最小示例
+
+```mermaid
+gantt
+    title Sprint-12 排期
+    dateFormat YYYY-MM-DD
+    section EPIC-3 收口
+    Story 3-02 实现与自测 :s302, 2026-11-05, 3d
+    Story 3-03 联调 :s303, after s302, 2d
+    里程碑：EPIC-3 验收 :milestone, m1, 2026-11-11, 0d
+```
+
+（占位符语义：`section` = Epic/工作流名；任务行 = `描述 :任务id, 开始日, 天数` 或 `描述 :任务id, after 前置id, 天数`；里程碑在 id 前加 `:milestone` tag 且时长 `0d`）
+
+### 使用原则
+
+1. **数据来源唯一**：图表数据必须取自 Epic checkbox / Story 状态 / Sprint 文档——图表是衍生视图（同 DASHBOARD/KANBAN），不是第二份账本；源数据更新后图表同步重新生成
+2. **落位**：甘特图随 Sprint 规划产物；燃尽/燃起趋势随每周项目审计更新；鱼骨图落 `{project_docs}/analysis/` 归因类文档（体裁 `rca_{topic}` / `retro_{topic}`）
+3. **不越界**：系统设计概念图（架构图/时序图/E-R 图等）不归 pm 产出，属 /arch；UI/UX 视觉设计稿属 /ued
+
 ---
 
 ## 数据唯一真实来源（⚠️ 强制规则）
@@ -186,6 +269,21 @@ PM 编写 AC 时必须：
 - 文件名、front matter id、标题三处编号必须一致
 
 **🔗 详细命令、创建流程和冲突修复**: 见 [Story 编号管理规则](references/story_numbering_rules.md)
+
+---
+
+## Issue 管理（⚠️ 强制规则）
+
+**Issue vs Story 区分**：Story 是「有计划的交付单元」（要做的事），Issue 是「开发中/线上发现的问题」（独立于 Story 跟踪的 bug / 缺陷）。两者并存，不混用。
+
+- **文件位置**：`docs/scrum/issues/issue-YYYYMMDD-{short-kebab-description}.md`
+- **ID 编号**：`ISSUE-YYYYMMDD-NNN`（当日序号，创建前冲突检测）
+- **状态 FSM**：OPEN → CONFIRMED → FIXING → FIXED → CLOSED（终态：CLOSED / WONTFIX / DUPLICATE，终态不可变）
+- **严重级别**：P0（阻塞）/ P1（重要）/ P2（体验）/ P3（微小）
+- **归档铁律**：终态 Issue 超 30 天 `git mv` 归档；**禁止删除** Issue 文件
+- **与 Story 关系**：P0/P1 Issue 必须有对应 Story 或在当前 Story 中修复；Issue `closed_by` 指向 Story 或 commit SHA
+
+**🔗 完整规范、FSM 转换矩阵、归档脚本、模板**：见 [Issue 管理规范](references/issue_management.md) + [Issue 模板](templates/issue_template.md)
 
 ---
 
@@ -372,16 +470,17 @@ DASHBOARD.md 和 KANBAN.md 是衍生视图，禁止直接修改。数据源是 `
 - [文档质量管理指南](references/document_quality_guide.md) - 渲染工具、更新流程、检查清单
 - [代码审查指南](references/code_review_guide.md) - Commit 格式、审查检查清单
 - [Story 状态 FSM](references/story_status_fsm.md) - ⭐ 8 状态完整转换矩阵、跳转条件、终态规则、冲突处理
+- [Issue 管理规范](references/issue_management.md) - 独立于 Story 的 bug/问题跟踪：FSM、编号、归档、严重级别、与 Story 关系
 
 **辅助脚本**：`scripts/audit_and_render.sh` / `audit_metadata.py` / `kanban_renderer.py` / `render_views.py`
 
-**模板文件**：`templates/` 目录（story / epic / dashboard / kanban / sprint_plan / sprint_retro / todo）
+**模板文件**：`templates/` 目录（story / epic / issue / dashboard / kanban / sprint_plan / sprint_retro / todo）
 
 **Agent Team 注册表**（pm 可编排的完整团队）：
 
 | Skill | 领域 | 何时唤起 |
 |-------|------|---------|
-| arch | 架构设计 | 设计文档升级、技术选型、数据模型、API 设计 |
+| arch | 架构设计 | 设计文档升级、技术选型、数据模型、API 设计、设计变更论证（analysis proposal 状态）、POC gate 评估 |
 | commit | 代码提交 | 开发完成后提交代码、创建 MR、语义化 commit |
 | dev | 开发实现 | 编码、调试、Bug 修复、功能开发 |
 | devops | 部署运维 | 容器重建+部署、SIT/E2E/UAT 前置环境准备 |
@@ -415,6 +514,7 @@ DASHBOARD.md 和 KANBAN.md 是衍生视图，禁止直接修改。数据源是 `
 - "部署到测试环境跑 E2E" → devops + qa
 - "上线后做一轮巡检" → sentinel
 - "Story 做完了检查设计对齐" → spec-xchecker
+- "实现中发现设计假设不成立，要修订设计" → arch（analysis 文档 proposal 状态）+ dev（POC spike，重路径时）+ arch（design update）+ pm（重拆 Story）——设计变更三步流程
 
 ### 编排流程
 
@@ -491,10 +591,28 @@ DASHBOARD.md 和 KANBAN.md 是衍生视图，禁止直接修改。数据源是 `
 
 ---
 
-**版本**: v14.1-exp
-**更新日期**: 2026-06-03
+**版本**: v14.5
+**更新日期**: 2026-11-05
 
 **更新日志**：
+- v14.6 (2026-11-05): **新增「项目管理图表」指引（承接 /arch v2.4 图表职责边界转介）**
+  - 选型：甘特图（mermaid `gantt` 原生）/ 燃尽·燃起图（表格为主，mermaid ≥ 10.9 可用 `xychart-beta`）/ 鱼骨图（`flowchart LR` 模拟）+ 甘特图最小示例
+  - 铁律：图表数据取自 Epic/Story/Sprint 源文件（「数据唯一真实来源」），图表是衍生视图非第二账本；落位规范（甘特→Sprint 规划、燃尽→周审计、鱼骨→analysis 归因文档）；系统设计概念图仍属 /arch 不越界
+- v14.5 (2026-11-02): **判定信号换轨 analysis proposal 状态**（MR !17 review 迭代，与 arch v2.3 配套）
+  - 四不派第 4 条与方案设计阶段评估信号：`design/proposal/` 下 DRAFT/REVIEWED 提案 → **`{project_docs}/analysis/` 下存在 status 为 proposal 的文档**（proposal 从文档类型降维为 analysis 头部状态；design `⏳ 待 POC` 信号不变）
+  - POC Story 对照表「结论产出」路径：`design/analysis/{topic}_poc/` → `{project_docs}/analysis/poc_{topic}/`；「代码去向」行同步 POC 执行位（实验过程落 `test_reports/poc/{topic}/` 不入库，采纳时精选迁入 analysis）；gate review「回 proposal 修订」→「回 analysis 文档修订（proposal 状态）」
+  - 编排注册表与编排示例措辞换轨；重/轻路径评估逻辑与 gate review 要求不动
+  - 发布门禁 4b 修复：方案设计阶段首步 arch 引用从 `.claude` 栈绝对路径泛化为技能名引用
+- v14.4 (2026-09-07): 🎯 **设计迭代 SOP 升级**（EPIC-7 / STORY-7-02，与 arch v2.2「设计变更三步流程」配套）
+  - 三不派 → **四不派**：新增第 4 条「Design 未定稿不派实现 Story」（`⏳ 待 POC` 或有未决 proposal 时只立 POC Story）
+  - 方案设计阶段新增 **proposal 评估环节**：检查 design Status 与 proposal 通道，重路径立 POC Story / 轻路径放行快速实验
+  - 新增 **POC Story 类型**指引：与实现 Story 的区别对照表（目标/AC/tags/代码去向/结论产出）+ gate review 独立签字要求（防判据同义反复，STORY-1-01 H3 教训）+ 先例指向
+  - 编排注册表 arch 行补「设计变更 proposal、POC gate 评估」；编排示例补设计修订路径
+- v14.3 (2026-08-22): 🎯 **新增 Issue 管理规范**（吸收自实战项目沉淀，EPIC-3 / STORY-3-02；rebase 重编号:原 v14.2-exp 与 master v14.2(发布版本规划)撞号,按时间线顺延）
+  - 新增 `references/issue_management.md`（Issue vs Story 区分、FSM、编号、归档、严重级别、与 Story 关系）+ `templates/issue_template.md`
+  - SKILL.md 新增「Issue 管理」节（强制规则，精简指向 reference）+ 「附加资源」/「模板文件」增补条目
+  - 泛化为模板语言（去项目专属引用），双栈同步 .claude/.codex
+- v14.2 (2026-08-16): 新增发布版本规划 §6(semver 2.0.0 + Keep a Changelog 定版,细则下沉 references/release_versioning.md);**摘除 -exp 后缀转正**——多意图编排(v14.0 引入)经 v2.1~v2.7 六个发布版本实战(EPIC-4 全程编排落地),不再是实验性能力
 - v14.1-exp (2026-06-03): 扩展 Agent Team 至 9 人，新增领域描述和触发场景
 - v14.0-exp (2026-06-03): 新增多意图编排能力
 - v13.1 (2026-06-01): 增强 Story 状态 FSM 定义

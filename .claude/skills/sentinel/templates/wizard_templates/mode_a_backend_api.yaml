@@ -1,0 +1,43 @@
+# wizard 模式 A:后端 API health/RED(wizard_onboarding_v1.2 §4)
+# 适用:微服务 / REST / gRPC,有 HTTP 入口
+# 推荐探针:http_probe(健康端点)+ api_smoke(多端点冒烟)+ metrics_scrape(RED 错误/量)
+# SRE 对齐:Golden Signals / RED
+#
+# 首次配置:Claude 按 SKILL.md wizard 引导,把 <占位> 替换为真实 target / 判据阈值,
+# 另存为 .claude/sentinel.d/<name>.yaml,再 `sentinel register <name>.yaml`。
+# 凭据(§12.1):健康端点常免鉴权;若 metrics 需 token,在项目根 .env.skill 建 [api_token]
+# section,本声明 credentials.api_token 填 section 名(凭据值绝不写进本 yaml)。
+schema_version: 1
+sentinel: backend_api
+schedule: "*/10 * * * *"
+description: "模式 A 后端 API:healthz + 多端点冒烟 + RED 指标"
+credentials:
+  api_token: api_token   # .env.skill [api_token] section;免鉴权则删本块
+probes:
+  - type: http_probe
+    target: http://<API_HOST>:<PORT>/healthz
+    assert:
+      op: expect_in
+      value: status_code
+      in: [200]
+  - type: api_smoke
+    target: http://<API_HOST>:<PORT>
+    params:
+      endpoints:
+        - {path: /healthz, key: healthz, expect_status: 200}
+        - {path: /api/v1/resources, key: list, expect_status: 200}
+        - {path: /api/v1/__unknown__, key: notfound, expect_status: 404}
+    assert:
+      op: expect_eq
+      value: all_passed
+      equals: true
+  - type: metrics_scrape
+    target: http://<API_HOST>:<PORT>/metrics
+    params:
+      queries:
+        error_count: http_errors_total
+        req_total: http_requests_total
+    assert:
+      op: expect_le
+      value: error_count
+      max: 10   # 占位:近窗口错误数上限,按实际量级调

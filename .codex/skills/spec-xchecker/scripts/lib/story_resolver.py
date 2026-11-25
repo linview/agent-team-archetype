@@ -180,19 +180,25 @@ def load_design_spec(story_id: str, project_dir: str) -> Optional[str]:
     # 3. 提取 Design Spec 引用（支持多种格式）
     design_spec_ref = None
 
-    # 格式 1: frontmatter 中的 design_docs 字段（v2.6 修复）
+    # 格式 1: frontmatter 中的 design_docs/design_refs 字段（v2.6 修复；v4.1.2/v4.1.3 扩展）
     yaml_pattern = r'^---\s*\n(.*?)\n---\s*\n'
     yaml_match = re.search(yaml_pattern, story_content, re.MULTILINE | re.DOTALL)
     if yaml_match:
         yaml_content = yaml_match.group(1)
-        if 'design_docs:' in yaml_content:
-            # 提取 design_docs 列表
-            pattern = r'design_docs:\s*\n\s*-\s*"([^"]+\.md)"'
+        if 'design_docs:' in yaml_content or 'design_refs:' in yaml_content:
+            # 提取 design_docs/design_refs 列表
+            # v4.1.2（B5 修复）：值形如 "path.md#锚点"——锚点段夹在 .md 与右引号之间，
+            # 旧正则 [^"]+\.md" 要求引号紧跟 .md 导致整类失配（DS-01/02/03 三项全误报）。
+            # v4.1.3（design_refs 扩展）：字段名兼容 design_refs（部分项目 Story 模板
+            # 使用该字段而非 design_docs），且值形如 "path.md（中文章节注释）"——.md 后
+            # 是全角括号注释而非 # 锚点。统一截取首个 .md 前的纯路径，两种尾部均自然剥离。
+            pattern = r'(?:design_docs|design_refs):\s*\n\s*-\s*"([^"]+\.md[^"]*)"'
             match = re.search(pattern, yaml_content)
             if match:
-                design_spec_ref = match.group(1).strip()
-                # 移除锚点（#xxx）
-                design_spec_ref = re.sub(r'#.*$', '', design_spec_ref)
+                raw_ref = match.group(1).strip()
+                path_match = re.match(r'([^#（(]+?\.md)', raw_ref)
+                if path_match:
+                    design_spec_ref = path_match.group(1).strip()
 
     # 格式 2: Markdown 链接格式 [文本](路径.md)（v2.6 修复, v4.1 扩展 B4）
     # v4.1: link_path 指向 design 目录也识别 —— Story body 常用

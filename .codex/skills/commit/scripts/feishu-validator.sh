@@ -31,6 +31,38 @@ error() {
 # 飞书工作项验证函数
 # ============================================
 
+# 飞书环境探测（STORY-5-02:require_validation=auto 模式下的环境条件必填判定）
+# ⚠️ 配置默认值已回归 require_validation=true(强制必填,MR !13 review 修正)——
+#    true 模式由调用方(agent/上游脚本)按配置先取得 uid 再传入,走"显式 uid→必须验证"分支;
+#    本探测仅在 auto 模式下决定"必填/跳过"分支
+# 判定信号(满足任一即飞书环境):
+#   1. 环境变量 FEISHU_AUTH_KEY 已设置
+#   2. 项目根 .env.skill / .env 配置了 FEISHU_AUTH_KEY
+#   3. 调用方显式传入飞书工作项 uid(如 --feishu-task)
+# 输出: 0 - 飞书环境(feishu.task 必填), 1 - 非飞书环境(跳过验证与 front matter)
+# 注意:本函数不依赖 lark-cli;lark-cli 可用性由 feishu_validate_task 自行降级
+feishu_env_detect() {
+    # 信号 1:环境变量
+    if [ -n "$(printenv FEISHU_AUTH_KEY 2>/dev/null)" ]; then
+        return 0
+    fi
+
+    # 信号 2:项目根 .env.skill / .env(复用 load_credential 的读取链)
+    local proj_root
+    proj_root=$(git rev-parse --show-toplevel 2>/dev/null)
+    if [ -n "$proj_root" ]; then
+        local env_file
+        for env_file in "$proj_root/.env.skill" "$proj_root/.env"; do
+            if [ -f "$env_file" ] && grep -qE "^FEISHU_AUTH_KEY=.+" "$env_file" 2>/dev/null; then
+                return 0
+            fi
+        done
+    fi
+
+    # 无任何飞书集成信号 → 非飞书环境
+    return 1
+}
+
 # 检查 YAML front matter 格式
 # 参数: $1 - MR description 文本
 # 输出: 0 - 格式正确, 53 - 格式错误 (503 映射到 53)
@@ -233,6 +265,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     echo "  source scripts/feishu-validator.sh"
     echo ""
     echo "函数:"
+    echo "  feishu_env_detect                           - 飞书环境探测(0=飞书环境,1=非飞书)"
     echo "  feishu_check_frontmatter <description>     - 检查 YAML front matter 格式"
     echo "  feishu_extract_task_id <description>       - 提取飞书工作项 ID"
     echo "  feishu_generate_frontmatter <task_id>      - 生成 YAML front matter"

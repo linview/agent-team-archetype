@@ -130,10 +130,10 @@ mr_generate_description() {
         primary_feature=$(echo "$source_branch" | sed -E 's/feat.*epic.*story.*//')
     fi
 
-    # 6. 生成 MR 描述
+    # 6. 生成 MR 描述（四段落结构:功能列表/变更列表/验证结果/补充说明,条目化禁长篇）
     local desc=""
 
-    # YAML front matter（飞书工作项）
+    # YAML front matter（飞书工作项,环境条件必填:有 feishu_task 才注入,非飞书环境省略）
     if [ -n "$feishu_task" ]; then
         desc+="---
 feishu.task: $feishu_task
@@ -142,90 +142,69 @@ feishu.task: $feishu_task
 "
     fi
 
-    # 功能说明
-    desc+="## 功能说明
+    # 功能列表（意图层,条目化）
+    desc+="## 功能列表
+
 "
     if [ -n "$story_id" ]; then
-        desc+="实现 $story_id："
-    fi
-    desc+="$primary_feature
-
+        desc+="- 实现 $story_id：$primary_feature
 "
-
-    # 核心变更
-    desc+="## 核心变更
-"
-
-    # 按模块分组描述变更
-    if [ "$has_dao" = true ]; then
-        desc+="### 数据层（DAO）
-"
-        git diff "${target_branch}...${source_branch}" -- internal/dao/ --stat 2>/dev/null | sed 's/^/  - /' | head -5
-        desc+="
+    else
+        desc+="- $primary_feature
 "
     fi
 
-    if [ "$has_model" = true ]; then
-        desc+="### 模型层
-"
-        git diff "${target_branch}...${source_branch}" -- internal/model/ --stat 2>/dev/null | sed 's/^/  - /' | head -3
-        desc+="
-"
-    fi
-
-    if [ "$has_logic" = true ]; then
-        desc+="### 业务逻辑层
-"
-        git diff "${target_branch}...${source_branch}" -- internal/logic/ --stat 2>/dev/null | sed 's/^/  - /' | head -5
-        desc+="
-"
-    fi
-
-    if [ "$has_test" = true ]; then
-        desc+="### 测试
-"
-        local test_files
-        test_files=$(echo "$changed_files" | grep "test.go" | wc -l)
-        desc+="- 更新 $test_files 个测试文件
-"
-        desc+="
-"
-    fi
-
-    if [ "$has_skill" = true ]; then
-        desc+="### 基础设施
-"
-        git diff "${target_branch}...${source_branch}" -- .codex/skills/ --stat 2>/dev/null | sed 's/^/  - /' | head -3
-        desc+="
-"
-    fi
-
-    # 变更统计
-    desc+="## 变更统计
-"
-    desc+="- 文件数: $file_count
-"
-    desc+="- 插入: +$insertions 行
-"
-    desc+="- 删除: -$deletions 行
-"
-    desc+="- 提交数: $commit_count commits
-"
-
-    # 测试状态
+    # 变更列表（实现层,文件级要点,条目化;agent 可基于 diff 细化）
     desc+="
-
-## 测试
+## 变更列表
 "
+    desc+="- 变更文件数: $file_count（+$insertions/-$deletions 行,$commit_count commits）
+"
+    if [ "$has_dao" = true ]; then
+        desc+="- 数据层（DAO）: $(git diff "${target_branch}...${source_branch}" -- internal/dao/ --name-only 2>/dev/null | wc -l) 个文件变更
+"
+    fi
+    if [ "$has_model" = true ]; then
+        desc+="- 模型层: $(git diff "${target_branch}...${source_branch}" -- internal/model/ --name-only 2>/dev/null | wc -l) 个文件变更
+"
+    fi
+    if [ "$has_logic" = true ]; then
+        desc+="- 业务逻辑层: $(git diff "${target_branch}...${source_branch}" -- internal/logic/ --name-only 2>/dev/null | wc -l) 个文件变更
+"
+    fi
     if [ "$has_test" = true ]; then
-        desc+="- [x] 单元测试已更新"
+        desc+="- 测试文件: $(echo "$changed_files" | grep "test" | wc -l) 个更新
+"
+    fi
+    if [ "$has_skill" = true ]; then
+        desc+="- 基础设施: $(git diff "${target_branch}...${source_branch}" -- .codex/skills/ --name-only 2>/dev/null | wc -l) 个文件变更
+"
+    fi
+
+    # 验证结果（证据层,条目化;agent 应替换为实际执行的验证命令与结果）
+    desc+="
+## 验证结果
+"
+    local has_verify_entry=false
+    if [ "$has_test" = true ]; then
+        desc+="- 单元测试已更新（请补充实际执行结果）
+"
+        has_verify_entry=true
     fi
     if [ "$has_dao" = true ] || [ "$has_logic" = true ]; then
-        desc+="- [x] 代码实现完成"
+        desc+="- 代码实现完成（请补充实际验证结果）
+"
+        has_verify_entry=true
+    fi
+    if [ "$has_verify_entry" = false ]; then
+        desc+="- （请补充实际执行的验证及结果,一行一条）
+"
     fi
 
+    # 补充说明（可选段,无内容省略——此处由 agent 按需追加,脚本不生成占位段落）
+
     echo "$desc"
-    echo "✅ MR 描述生成完成（基于完整 diff 分析）" >&2
+    echo "✅ MR 描述生成完成（基于完整 diff 分析,四段落结构）" >&2
 }
 
 # ============================================
@@ -517,30 +496,34 @@ code_committer_mr_create() {
         fi
     fi
 
-    # 确定飞书工作项
-    if [ -z "$feishu_task" ]; then
-        if [ "$non_interactive" = true ]; then
-            # 非交互模式，跳过飞书验证
-            feishu_task=""
-        else
-            # 交互模式，询问是否关联飞书工作项
-            echo "是否关联飞书工作项？[y/N]"
-            read -r answer
-            if [[ "$answer" =~ ^[Yy]$ ]]; then
-                echo "请输入飞书工作项 ID:"
-                read -r feishu_task
-
-                # 验证飞书工作项
-                if [ -n "$feishu_task" ]; then
-                    feishu_validate_task "$feishu_task" || return 500
-                fi
-            else
-                feishu_task=""
-            fi
-        fi
-    else
-        # 验证飞书工作项
+    # 确定飞书工作项（STORY-5-02;require_validation 三模式,默认 true 强制必填）
+    # 脚本内建 auto 探测语义;true 模式由调用方按配置先取得 uid 传入(走显式 uid 分支)
+    # 飞书环境(feishu_env_detect 探测到集成,或用户已显式提供 uid)→ 必填且验证
+    # 非飞书环境 → 跳过验证与 front matter,不阻塞 MR 创建
+    if [ -n "$feishu_task" ]; then
+        # 用户显式提供 uid → 视为飞书环境,必须验证
         feishu_validate_task "$feishu_task" || return 500
+    elif feishu_env_detect; then
+        # 飞书环境但未提供 uid
+        if [ "$non_interactive" = true ]; then
+            error "飞书环境检测到 FEISHU_AUTH_KEY,非交互模式必须提供 --feishu-task"
+            return 500
+        fi
+        # 交互模式:飞书环境必填,循环补正
+        while [ -z "$feishu_task" ]; do
+            echo "检测到飞书集成,请输入飞书工作项 ID（必填）:"
+            read -r feishu_task
+            if [ -z "$feishu_task" ]; then
+                echo "飞书环境下工作项 ID 必填,不可留空"
+            fi
+        done
+        feishu_validate_task "$feishu_task" || return 500
+    else
+        # 非飞书环境:跳过工作项验证
+        if [ "$non_interactive" = false ]; then
+            info "未检测到飞书集成(FEISHU_AUTH_KEY),跳过飞书工作项关联"
+        fi
+        feishu_task=""
     fi
 
     # 确定 MR Title

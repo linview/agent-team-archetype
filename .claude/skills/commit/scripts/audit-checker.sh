@@ -268,25 +268,28 @@ audit_install_hooks() {
 
     info "安装 pre-commit hook..."
 
-    cat > "$pre_commit_hook" << 'EOF'
+    # heredoc 不加引号:安装时展开 $skill_script_dir 为绝对路径(生成 hook 不依赖相对路径)
+    cat > "$pre_commit_hook" << EOF
 #!/bin/bash
 # Pre-commit hook for Code Committer Skill
 # 自动执行内审检查
 
 echo "🔍 执行 pre-commit 内审检查..."
 
-# 调用 audit-checker.sh
-SCRIPT_DIR="$(dirname "$0")"
-"$SCRIPT_DIR/../../scripts/audit-checker.sh" audit-run-pre-commit
+# 调用 audit-checker.sh(安装时已嵌入绝对路径)
+"\$SKILL_AUDIT_CHECKER" audit-run-pre-commit
 
 # 检查退出码
-if [ $? -ne 0 ]; then
+if [ \$? -ne 0 ]; then
     echo ""
     echo "⚠️  Pre-commit check failed, commit aborted."
     echo "   Use --no-verify to skip this check."
     exit 1
 fi
 EOF
+    # 把占位符替换为 skill 内 audit-checker.sh 的绝对路径
+    sed -i.bak "s|\\\$SKILL_AUDIT_CHECKER|$skill_script_dir/audit-checker.sh|" "$pre_commit_hook"
+    rm -f "$pre_commit_hook.bak"
 
     chmod +x "$pre_commit_hook"
 

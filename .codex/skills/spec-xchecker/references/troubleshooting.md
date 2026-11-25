@@ -22,9 +22,10 @@ WARNING: DS-01 FAILED: Story does not reference Design Spec
 ```
 
 **解决方案**：
-1. 在 Story 文档中添加 Design Spec 引用
+1. 在 Story 文档中添加 Design Spec 引用——正文行 `Design Spec: ../design/xxx.md`，或 frontmatter 列表 `design_docs:`/`design_refs:`（v4.1.3 起双字段兼容，值支持 `path.md`、`path.md#锚点`、`path.md（章节注释）` 三种形态）
 2. 创建对应的 Design Spec 文档
 3. 确保 Design Spec 文件路径正确
+4. 注意：终态（COMPLETED）Story 引用已归档的旧版文档报 FAIL 属预期形态（终态历史快照语义），不建议为此刷新终态引用
 
 ### 问题 3：检查通过但实际有问题
 

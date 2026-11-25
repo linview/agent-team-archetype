@@ -37,7 +37,7 @@ code_committer_mr_create \
     --feishu-task 6723548458 \
     --non-interactive
 
-# 输出:
+# 输出(飞书环境,.env.skill 配置了 FEISHU_AUTH_KEY):
 # ℹ️  自动检测目标分支: master
 # ℹ️  正在验证飞书工作项 #6723548458...
 # ✅ 工作项验证通过: "用户登录功能开发"
@@ -94,4 +94,21 @@ elif [ $EXIT_CODE -eq 500 ]; then
 else
     echo "未知错误: $EXIT_CODE"
 fi
+```
+
+## 示例 6: 非飞书环境创建 MR（跳过工作项验证）
+
+```bash
+source scripts/code-committer.sh
+code_committer_mr_create \
+    --source-branch feature/login \
+    --target-branch master \
+    --mr-title "feat(auth): implement login" \
+    --non-interactive
+
+# 前提:未配置 FEISHU_AUTH_KEY 且未传 --feishu-task → 判定为非飞书环境
+# 输出:
+# ℹ️  自动检测目标分支: master
+# ℹ️  未检测到飞书集成(FEISHU_AUTH_KEY),跳过飞书工作项关联
+# ✅ MR 创建成功（description 不含 feishu.task front matter）
 ```

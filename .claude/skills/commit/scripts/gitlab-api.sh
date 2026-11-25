@@ -208,7 +208,7 @@ gitlab_get_pat() {
     local proj_root
     proj_root=$(git rev-parse --show-toplevel 2>/dev/null)
     if [ -n "$proj_root" ]; then
-        local proj_config="$proj_root/.claude/code-committer.yaml"
+        local proj_config="$proj_root/.claude/skills/commit/config/code-committer.yaml"
         if [ -f "$proj_config" ]; then
             local config_pat
             config_pat=$(grep -oP 'pat:\s*\K[^[:space:]]+' "$proj_config" 2>/dev/null | head -n1)
@@ -474,16 +474,19 @@ mr_get_template() {
 
     # 如果模板文件不存在，返回默认模板
     cat << 'EOF'
-## 功能说明
-（描述本次变更的目的）
+## 功能列表
 
-## 变更内容
-- 变更点 1
-- 变更点 2
+本 MR 交付的能力/修复点（意图层）：
 
-## 测试
-- [ ] 单元测试通过
-- [ ] SIT 测试通过
+- （交付的能力/修复点，一行一条、动宾结构）
+
+## 变更列表
+
+- （文件级变更要点，一行一条；可按目录分组）
+
+## 验证结果
+
+- （已执行的验证及结果，一行一条，附证据）
 EOF
 }
 

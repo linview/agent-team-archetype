@@ -1,6 +1,7 @@
 ---
 name: refactor
 description: 安全重构代码技能。当用户明确提到"重构"、"代码异味"或需要在TDD循环的Refactor阶段改进代码内部结构时使用。
+version: "1.0"
 
 **仅在以下场景触发**：
 - 用户明确说"重构这段代码"
@@ -179,7 +180,7 @@ go test ./... -v
 ### 步骤 4：提交（可选）
 
 ```bash
-git add .
+git add .   # ⚠️ 禁止 -f：不得绕过 .gitignore 强加文件（见 commit skill 铁律）
 git commit -m "refactor: 提取 validateEmail 函数"
 ```
 

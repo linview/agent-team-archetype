@@ -1,0 +1,3 @@
+# 凭据铁律 (design v1.2 §12.1):.env.skill 绝不提交。
+# 根 .gitignore 已全局忽略 .env.skill;本文件为 skills 层冗余加固(防误删根规则后泄漏)。
+.env.skill

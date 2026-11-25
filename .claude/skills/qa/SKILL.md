@@ -1,7 +1,7 @@
 ---
 skill: "qa"
 description: "QA 工作技能 — 测试分层架构、UT/API/SIT/E2E/UAT 测试、交叉验证策略、测试数据管理、测试报告管理。当用户提到测试、QA、质量保证、回归测试、单元测试、集成测试、验收测试、测试覆盖率、pytest、go test、E2E、Playwright、monkey test、fuzz test、RPC 测试、测试用例设计、TDD、测试框架、测试策略审查、问题排查、测试环境、测试数据、SIT 交叉验证、或需要设计/执行/增强测试策略时，必须使用此技能。确保所有测试活动遵循分层架构和业务正确性验证原则。"
-version: "7.1"
+version: "7.5"
 ---
 
 # QA 工作技能
@@ -58,6 +58,51 @@ version: "7.1"
 | **UAT** | 用户可感知功能场景（全面准确，非仅有数据） | 确认功能/数据精准可用 | 最少 |
 
 > **完整定义**：每个测试层级的详细定义、目标、测试范围、工具和模式，见 [testing_layer_definitions.md](references/testing_layer_definitions.md)
+
+### 测试分类学（区分测试类型的唯一标准 = oracle 从哪来）
+
+⚠️ **区分测试类型的唯一标准是 oracle（判断对错的标准）来源，不是输入是否随机。** "Random" 是修饰词不是类型——配崩溃 oracle = monkey，配不变量 oracle = PBT。
+
+#### 测试分类学 vs 功能测试金字塔（金字塔第一优先级，分类学适配专项测试）
+
+⚠️ **功能开发测试领域，分层测试金字塔是第一优先级**——测试规划、目录归属、覆盖率、回归门禁全部由金字塔主导。**不要**给功能测试的每条用例做分类学判型；分类学只在两个场合登场：
+
+| 场合 | 谁主导 | 分类学的角色 |
+|---|---|---|
+| **功能开发测试**（日常，第一优先级） | 金字塔五层（UT→API→SIT→E2E→UAT）：规划/目录/覆盖率/门禁 | 仅两处：① E2E 内部 @probe/@sanity 子类划分；② 断言原则（验证业务逻辑正确性 = 强 oracle 思想，SIT 交叉验证即 PBT 形态） |
+| **专项测试**（功能测试之后启动） | 按测试使命选型（分类学登场） | 性能测试→**Stress**（无泄漏）；稳定性测试→**Monkey/Stress**（崩溃即 bug/资源泄漏）；随机测试→**Monkey**（找崩溃）/**Fuzz**（验证契约）；性质验证专项→**PBT**（不变量） |
+
+**两维度正交**：金字塔回答「测多深」（集成深度），分类学回答「用什么判对错」（oracle 来源）。专项测试落地时两者复合——fuzz 后端 API 边界 = 金字塔 API 层 + 分类学 Fuzz 类；但**顺序上金字塔先行**：分层功能测试打底是专项测试的前提。
+
+**口诀**：功能测试金字塔先行，专项测试分类学适配。
+
+**典型误用**：① 用金字塔维度回答「这是不是 monkey」——monkey 是分类学概念，与放哪层无关；② 反过来，功能测试规划时给每条用例判五类——功能测试默认即 E2E 类（业务预期 oracle），无需判型。
+
+| 类型 | **oracle** | 找什么 bug | 典型归属 |
+|---|---|---|---|
+| **E2E** | 业务预期（精确值/路径） | 功能不工作 | `tests/e2e/`（正向功能 + 数据准确性巡检） |
+| **Monkey** | **崩溃即 bug（无业务 oracle）** | 崩溃/白屏/卡死 | 功能校验型项目**通常不做**（诉求是功能校验，非 crash 发现） |
+| **Fuzz** | **不违契约** | 解析器/输入处理崩 | 暂缓；若做，fuzz 后端 API 输入边界非 UI |
+| **PBT** | **数学不变量** | 逻辑违性质 | **SIT 交叉验证 = 此类项目的 PBT 形态**（服务层==数据层 即 property） |
+| **Stress** | **无泄漏** | 内存/竞态 | 归 monkey stress 子集 |
+
+**三个关键洞察**：① Monkey（弱 oracle）和 PBT（强 oracle）是两极端，混谈是混乱根源；② "Random" 是修饰词不是类型；③ 功能校验型项目唯一的真 PBT 是 SIT 交叉验证，交互测试不做 monkey/PBT 混淆。
+
+#### @probe vs @sanity 边界（E2E 内部子类参考）
+
+`@probe`/`@sanity` 是实战项目常用的 E2E 子类划分约定（marker 命名可由项目自定义）：
+
+| 维度 | `@sanity` | `@probe` |
+|---|---|---|
+| 定位 | 正向功能 E2E | 数据准确性巡检（E2E 子类） |
+| oracle | 业务预期（精确值/路径） | 数据非空/字段映射/链路通 |
+| 环境 | 测试环境（TEST_ENV=test） | **生产环境**（TEST_ENV=prod） |
+| 频率 | 每次提交 CI 跑（`--grep @sanity`） | 手动/巡检跑，**不进 CI** |
+| 发现 | 功能不工作 | 表格恒空/字段错配/跳转断裂/数据重复 |
+
+**已知 bug 的处理**（@probe 专属）：未修复的已知 bug 用 `test.fixme` 标注——不红 CI（fixme = skip + expected failure），修复后去掉 `.fixme` 自动成为回归门禁，形成探针↔bug 双向追溯。
+
+> **测试分类学执行准则**（判型四步流程、归属与 CI 策略、test.fixme 标注规程、误判检查清单与纠正表、双维度定位），见 [test_taxonomy.md](references/test_taxonomy.md)。
 
 ### 各层级核心规则
 
@@ -198,6 +243,39 @@ assert all(name.strip() for name in commit_names), "commit 名称不应为空"
 | UAT | **PRD 文档 / Epic** | `epic`(保持 PRD@Epic 粒度) |
 
 > 反标不止是"写下来",而是要让测试集随设计演进**新陈代谢**:见下方「分层用例 review」节与 [test_traceability.md](references/test_traceability.md)。
+
+### ⚠️ 源锚先行(生成流程铁律)
+
+> 实测教训(STORY-5-03):规则写在 review 节 ≠ 生成时落位——基线重放 `design=` 源锚落位 0%。落位必须发生在**生成流程内**,而非事后补标。
+
+**生成每条用例前,必须按序完成前置检查(缺一不写用例体)**:
+
+1. **定位设计章节**:打开本用例所属层的唯一真实来源文档(上表),找到本用例验证的具体章节;
+2. **取源锚**:`design="<doc>_vX.Y#<真实章节标题核心词>"` —— 版本号取自真实文件名(如 `service_layer_architecture_v4.2.md` → `_v4.2`);`#` 后的章节词必须能在文档标题中 grep 到(禁编造);
+3. **再写用例体**:先写 `@trace(...)` marker 行,再写测试函数——**源锚先行,不是生成后补标**。
+
+> 层例外:E2E/UAT 用 `epic`(epic 即 PRD 源锚,无需 `design=`);UT 不使用 `@trace`;regression/hotfix/探索性用 `note` 退化口(见「非对角测试」规则)。
+
+**生成后自检(交付前必做,零缺失才可交付)**:
+
+```bash
+# 列出所有不含 design= 源锚的用例文件(输入=本次新增/修改的用例文件或目录)
+grep -rL 'design=' <用例文件或目录> --include='*.py'
+# 输出为空 → 可交付;有输出 → 逐文件回补源锚(走上方步骤 1-2)后复检
+```
+
+**完整示例(SIT 用例,源锚写法)**:
+
+```python
+@pytest.mark.sit  # 层标记放外层
+@pytest.mark.trace(  # ← trace 紧贴 def;本行注释勿写任何半角括号,否则 trace_drift.py 漏扫
+    story="STORY-6-05", ac="SIT",
+    design="service_layer_architecture_v4.2#查询路由策略",
+)
+def test_gpu_usage_query_routes_to_dim_metric():
+    """GPU 用量查询统一走 dim_metric 表(v4.2 11.6 单一路由)。"""
+    ...
+```
 
 ### 边界值与等价类划分
 
@@ -374,7 +452,7 @@ mv test_reports/*report*.html test_reports/archive/
 ### 漂移检测（定期分层 review 的固定步骤）
 
 ```bash
-python .claude/skills/qa/scripts/trace_drift.py
+python <本 skill 安装路径>/scripts/trace_drift.py
 # → test_reports/trace_drift_report.md(纯静态,不开 pytest、不连 PG/K8s)
 ```
 
@@ -435,6 +513,7 @@ cd backend && go test -coverprofile=coverage.out ./...
 
 - **[testing_layer_definitions.md](references/testing_layer_definitions.md)** — ⭐ UT/API/SIT/E2E/UAT 标准定义、SIT 交叉验证实战案例
 - **[test_traceability.md](references/test_traceability.md)** — ⭐ 测试可追溯性与设计漂移检测(两维度模型、层↔锚对角映射、4 态检测、能力边界)
+- **[test_taxonomy.md](references/test_taxonomy.md)** — ⭐ 测试分类学执行准则（判型四步流程 + 归属/CI 策略 + test.fixme 标注规程 + 误判检查清单 + 分类学×金字塔双维度定位）
 - **[test_idempotency.md](references/test_idempotency.md)** — 测试幂等性四阶段策略、数据准备原则
 - **[ut_coverage_guide.md](references/ut_coverage_guide.md)** — UT 覆盖率分层统计、行业对标、报告模板
 - **[troubleshooting.md](references/troubleshooting.md)** — 问题排查方法论、环境一致性、重构测试流程
@@ -457,17 +536,26 @@ cd backend && go test -coverprofile=coverage.out ./...
 - Google 测试标准：https://testing.googleblog.com/
 - Martin Fowler: https://martinfowler.com/
 
-**协作 SKILL**：
-- `.claude/skills/dev/SKILL.md` — 开发工作流（测试命令、覆盖率工具）
-- `.claude/skills/pm/SKILL.md` — Story 管理与 AC 测试分层策略
-- `.claude/skills/arch/SKILL.md` — 架构设计规范
+**协作 SKILL**（同仓库 skill,按所在栈取 `skills/<name>/SKILL.md`）：
+- dev — 开发工作流（测试命令、覆盖率工具）
+- pm — Story 管理与 AC 测试分层策略
+- arch — 架构设计规范
 
 ---
 
-**版本**: v7.3
-**更新日期**: 2026-07-30
+**版本**: v7.5
+**更新日期**: 2026-08-22
 
 **更新日志**：
+- v7.5 (2026-08-22): 🎯 **吸收测试分类学 + 执行准则化**(oracle 区分测试类型唯一标准)(EPIC-3 / STORY-3-01 rebase 重编号:原 v7.4 与 STORY-5-03 撞号,按时间线顺延)
+  - 新增 `references/test_taxonomy.md` v2.0 **执行准则**——判型四步流程（问 oracle → 问输入 → 定类型 → 双检）、归属与 CI 策略表（六类型 × 归属动作/CI 策略/何时写）、test.fixme 标注规程（4 步操作序列 + 三方式对照）、误判检查清单（6 条反例 + 纠正表）、rationale 速查附录
+  - SKILL.md 新增「测试分类学 vs 功能测试金字塔」辨析——**金字塔第一优先级**：功能开发测试（规划/目录/覆盖率/门禁）全由金字塔主导，日常用例不做分类学判型；分类学适配功能测试之后的专项测试选型（性能→Stress、稳定性→Monkey/Stress、随机→Monkey/Fuzz、性质验证→PBT）；口诀「功能测试金字塔先行，专项测试分类学适配」
+  - SKILL.md「测试分类学」节保留摘要表 + 三洞察 + @probe/@sanity 表；判别口诀留主文件,可执行细则归 reference——与 v7.0「主文件精简 + reference 详解」模式一致
+  - 吸收自实战项目沉淀（EPIC-3 / STORY-3-01）：泛化为模板语言（去项目专属引用），双栈同步 .claude/.codex
+- v7.4 (2026-08-22): 🔒 **源锚先行——design 源锚落位进生成流程**(STORY-5-03)
+  - 实测重放证据:基线 `examples/backend/tests/` 业务用例 `design=` 源锚落位 0/3;按 v7.3 流程重放生成 4 条用例落位 0/4 —— 规则存在于「分层用例 review」节(事后 review 侧),不在生成流程路径上,且无交付自检
+  - 「测试用例设计原则」节新增「源锚先行」生成流程铁律:前置检查 3 步(定位设计章节 → 取 `design="<doc>_vX.Y#<真实章节>"` 源锚 → 再写用例体)+ 生成后自检(`grep -rL 'design='` 零缺失才可交付)
+  - 附完整 SIT 用例示例(含版本化源锚写法);强化后二次重放落位 4/4(100%)
 - v7.3 (2026-07-30): 🔧 **收紧 UT 不进入 `@trace` 范围**(消除 Python 栈下 UT 误标风险)
   - `VALID_AC` 移除 `"UT"`(仅保留 API/SIT/E2E/UAT);`_validate_kwargs` 对 `ac="UT"` 报专属引导 issue
   - 原则:UT 唯一真实来源是代码符号(非设计文档),`@trace` 的 design 源锚语义错配;UT↔代码追溯交 spec-xchecker CT 层

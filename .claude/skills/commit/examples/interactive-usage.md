@@ -26,10 +26,10 @@ code_committer_mr_create
 # ℹ️  目标分支是 origin/master，确认吗？[Y/n]
 #    Y
 # ℹ️  检测到 $GITLAB_PAT 已设置
-# ℹ️  是否关联飞书工作项？[y/N]
-#    y
-# 请输入飞书工作项 ID:
+# ℹ️  检测到飞书集成(FEISHU_AUTH_KEY),请输入飞书工作项 ID（必填）:
 #    6723548458
+# （未检测到飞书集成时,此步自动跳用并输出:
+#   ℹ️  未检测到飞书集成(FEISHU_AUTH_KEY),跳过飞书工作项关联）
 # ℹ️  正在验证飞书工作项 #6723548458...
 # ✅ 工作项验证通过: "用户登录功能开发"
 # 请输入 MR Title (Conventional Commits 格式):

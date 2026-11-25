@@ -1,0 +1,50 @@
+# wizard 模式 B:数据-ETL/批处理 liveness(wizard_onboarding_v1.2 §4)
+# 适用:cron / Airflow / systemd timer 定时任务
+# 推荐探针:schedule_liveness(心跳)+ log_grep(错误日志)+ api_query(容器健康)
+# SRE 对齐:cron heartbeat
+#
+# 首次配置:Claude 按 SKILL.md wizard 引导,把 <占位> 替换为真实 target / 判据,
+# 另存为 .claude/sentinel.d/<name>.yaml,再 `sentinel register <name>.yaml`。
+# fetcher(取日志/查容器)由 env 提供,引擎不内置连接逻辑(可移植 + 不碰真实环境):
+#   export SENTINEL_LOG_FETCHER=<ssh/scp wrapper 或本地替身>
+#   export SENTINEL_API_FETCHER=<docker/k8s adapter wrapper>
+# 凭据(§12.1):在 .env.skill 建 [ssh](LOG_TOKEN 等)/ [api_token] section;
+# 本声明 credentials 填 section 名,值绝不写进 yaml。
+schema_version: 1
+sentinel: data_etl
+schedule: "0 * * * *"
+description: "模式 B 数据-ETL:定时心跳 + 错误日志 + 容器健康"
+credentials:
+  ssh: ssh               # .env.skill [ssh] section(取日志凭据)
+  api_token: api_token   # .env.skill [api_token];免鉴权则删本行
+probes:
+  - type: schedule_liveness
+    target: /var/log/<JOB>_scheduler.log
+    params:
+      trigger_pattern: "job <JOB_NAME> (started|triggered|success)"
+      requires_env: [LOG_TOKEN]
+    assert:
+      op: expect_ge
+      value: trigger_count
+      min: 1   # 占位:近窗口至少触发 1 次(心跳)
+  - type: log_grep
+    target: /var/log/<APP>.log
+    params:
+      pattern: "ERROR|Traceback|Exception"
+      requires_env: [LOG_TOKEN]
+    assert:
+      op: expect_le
+      value: match_count
+      max: 0   # 错误日志清零
+  - type: api_query
+    target: "docker:<CONTAINER_NAME>"
+    params:
+      adapter: docker_inspect
+      fields:
+        status: State.Status
+        health: State.Health.Status
+      requires_env: [API_TOKEN]
+    assert:
+      op: expect_eq
+      value: status
+      equals: running

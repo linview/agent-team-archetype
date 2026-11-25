@@ -17,10 +17,12 @@ gitlab:
 # 飞书配置
 # ============================================
 feishu:
-  # 是否强制验证飞书工作项
-  # 非交互模式：验证失败则退出
-  # 交互模式：提示补正，阻止创建
-  require_validation: true
+  # 飞书工作项验证（STORY-5-02;MR !13 review 修正:默认值回归 true）
+  # true: 强制必填（默认,等同旧版行为——任何环境都必须提供并验证 uid）
+  # auto: 环境条件必填（显式开启）——探测 FEISHU_AUTH_KEY / 用户显式 uid,
+  #       探测到则必填并验证,探测不到则跳过
+  # false: 完全跳过
+  require_validation: "true"
 
   # lark-cli 身份类型（user/bot）
   auth_identity: "user"

@@ -45,6 +45,9 @@ def generate_markdown_report(results, output_path):
     checks = results.get('checks', [])
     passed_checks = [check for check in checks if check.get('passed', True)]
     passed_check_ids = [check.get('check_id') for check in passed_checks]
+    # v4.2.1 降级语义（ISSUE-20261124-003）: SKIP=未覆盖（非通过非失败），WARN=通过但降级
+    skipped_checks = [check for check in checks if check.get('status') == 'SKIP']
+    warned_checks = [check for check in checks if check.get('status') == 'WARN']
 
     report += f"""
 ## 执行摘要
@@ -52,13 +55,17 @@ def generate_markdown_report(results, output_path):
 - **检查项目**: {summary.get('total_checks', 21)}
 - **通过**: {summary.get('passed', 0)} ({', '.join(passed_check_ids) if passed_check_ids else '无'})
 - **失败**: {summary.get('failed', 0)} (P0: {summary.get('p0_issues', 0)}, P1: {summary.get('p1_issues', 0)}, P2: {summary.get('p2_issues', 0)})
+- **未覆盖 (SKIP)**: {summary.get('skipped', len(skipped_checks))} —— 提取失败/模式未命中，检查未执行，不代表通过
+- **降级 (WARN)**: {summary.get('warned', len(warned_checks))} —— 通过但部分校验未执行/无法完整对账
 """
 
     # 添加问题清单（从 results['checks'] 中过滤）
+    # v4.2.1: SKIP 项（passed=False 但 status='SKIP'）是「未覆盖」而非「不一致」，不算问题
     checks = results.get('checks', [])
-    p0_issues = [check for check in checks if not check.get('passed', True) and check.get('severity') == 'P0']
-    p1_issues = [check for check in checks if not check.get('passed', True) and check.get('severity') == 'P1']
-    p2_issues = [check for check in checks if not check.get('passed', True) and check.get('severity') == 'P2']
+    real_failed = [check for check in checks if not check.get('passed', True) and check.get('status') != 'SKIP']
+    p0_issues = [check for check in real_failed if check.get('severity') == 'P0']
+    p1_issues = [check for check in real_failed if check.get('severity') == 'P1']
+    p2_issues = [check for check in real_failed if check.get('severity') == 'P2']
 
     report += f"""
 ## 问题清单
@@ -92,6 +99,31 @@ def generate_markdown_report(results, output_path):
             report += f"- **{issue.get('check_id')}**: {issue.get('description')}\n"
             report += f"  {issue.get('message', '')}\n\n"
 
+    # v4.2.1: 未覆盖项（SKIP）与降级项（WARN）独立展示——覆盖率说明而非绿勾/红叉
+    if skipped_checks:
+        report += f"""
+## ⏭️ 未覆盖项（{len(skipped_checks)} 个，检查未执行不代表通过）
+
+"""
+        for check in skipped_checks:
+            report += f"### ⏭️ {check.get('check_id')}: {check.get('description')}\n\n"
+            report += f"  **覆盖率说明**: {check.get('message', '')}\n"
+            if check.get('details'):
+                report += f"  **详情**: {check.get('details')}\n"
+            report += "\n"
+
+    if warned_checks:
+        report += f"""
+## ⚠️ 降级提示项（{len(warned_checks)} 个，通过但部分校验未执行）
+
+"""
+        for check in warned_checks:
+            report += f"### ⚠️ {check.get('check_id')}: {check.get('description')}\n\n"
+            report += f"  **降级说明**: {check.get('message', '')}\n"
+            if check.get('details'):
+                report += f"  **详情**: {check.get('details')}\n"
+            report += "\n"
+
     # 添加通过的检查项（增强详情）
     passed_checks = [check for check in checks if check.get('passed', True)]
 
@@ -103,8 +135,10 @@ def generate_markdown_report(results, output_path):
         report += "(无通过的检查项)\n\n"
     else:
         # 按严重程度分组（通过的检查通常没有 severity，但为了保持一致）
+        # v4.2.1: WARN 项图标区分（通过但降级），避免与完全通过混同
         for check in passed_checks:
-            report += f"### ✅ {check.get('check_id')}: {check.get('description')}\n\n"
+            icon = "⚠️" if check.get('status') == 'WARN' else "✅"
+            report += f"### {icon} {check.get('check_id')}: {check.get('description')}\n\n"
 
             # 详细信息（如果有）
             if check.get('message'):
@@ -153,8 +187,10 @@ def generate_json_report(results, output_path):
     strategy = results.get('strategy')
 
     # 提取问题列表（从 checks 中过滤出未通过的项）
+    # v4.2.1: SKIP 项是「未覆盖」非「不一致」，不计入 issues，单独归入 uncovered
     checks = results.get('checks', [])
-    issues = [check for check in checks if not check.get('passed', True)]
+    issues = [check for check in checks if not check.get('passed', True) and check.get('status') != 'SKIP']
+    uncovered = [check for check in checks if check.get('status') == 'SKIP']
 
     report = {
         "story_id": results.get('story_id'),
@@ -167,8 +203,11 @@ def generate_json_report(results, output_path):
             "p0_issues": summary.get('p0_issues', 0),
             "p1_issues": summary.get('p1_issues', 0),
             "p2_issues": summary.get('p2_issues', 0),
+            "skipped": summary.get('skipped', len(uncovered)),
+            "warned": summary.get('warned', 0),
         },
-        "issues": issues
+        "issues": issues,
+        "uncovered": uncovered
     }
 
     # 添加策略信息（v2.4 POC）

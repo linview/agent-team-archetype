@@ -1,8 +1,7 @@
 ---
 name: "dev"
 description: "开发工作流程指导 - 编码、测试、代码质量、MR/PR 创建和 CI/CD。用于开发任务、编码、功能实现、Bug 修复、单元测试、代码覆盖率、代码审查、CI/CD 流水线和 Git 操作。"
-metadata:
-  version: "5.2"
+version: "5.5"
 ---
 
 # Development Workflow
@@ -265,16 +264,9 @@ func TestXXX(t *testing.T) {
 
 ## 代码提交规范
 
-**Commit Message 格式**：
-```
-<type>(<scope>): <subject>
+**Commit Message 格式**：`<type>(<scope>): <subject>`（如 `feat(auth): add JWT login`）
 
-<body>
-
-<footer>
-```
-
-**类型**：`feat`, `fix`, `refactor`, `docs`, `test`, `chore`
+> 📌 完整规范（type 完整枚举 / body / footer / auto-generate 裁决规则）统一由 commit skill 管理，单一权威源：[commit-conventions](../commit/references/commit-conventions.md)。本节不复制易变内容，提交时按需读取。
 
 ---
 
@@ -283,6 +275,8 @@ func TestXXX(t *testing.T) {
 **默认行为**：
 - ✅ **只做**：`git add` + `git commit`（提交到本地分支）
 - ❌ **不做**：`git push`（不推送远程）
+
+**⚠️ 暂存禁用 `-f`**：`git add` 禁止带 `-f`/`--force`——会绕过 `.gitignore` 把临时报告、密钥、构建产物等强行入库。文件被 ignore 加不进去时，先用 `git check-ignore -v <file>` 确认命中规则：确需入库则修订 `.gitignore` 或移动文件路径后正常添加；否则放弃添加（详见 commit skill「git add 禁用 -f」铁律）
 
 **`{main_branch}` 分支保护规则**：
 - **方式 1**：Review 授权流程（修改代码 → commit → 等待 review → 用户手动 push）
@@ -336,17 +330,48 @@ func TestXXX(t *testing.T) {
 
 ### Worktree 位置（⚠️ 铁律）
 
-**默认位置：项目根目录下的 `.worktrees/{branch_name}/`**（不要用项目外的兄弟目录）
+**唯一正确位置：项目根目录下的 `.worktrees/{目录名}/`**
 
-- ✅ `{project_root}/.worktrees/feat-story-06-01/`
-- ❌ `../{project_name}-worktrees/`、`../worktrees/`、`/tmp/...`
+**目录名映射（唯一规则）**：**目录名 = 分支名中的 `/` 替换为 `-`**（保留完整分支语义，含 `feat/` 等前缀）
 
-**为什么**：留在项目根内 → 可发现、清理不误伤（兄弟目录易被当无关文件夹整体删除），且不破坏以项目根为基准的容器卷/bind mount（实测 netbox-lab 容器卷被兄弟目录 worktree 清理误伤，容器直接 exited）。
+- ✅ 分支 `feat/story-06-01` → `{project_root}/.worktrees/feat-story-06-01/`
+- ✅ 分支 `feat/epic5-worktree-rule-fix` → `{project_root}/.worktrees/feat-epic5-worktree-rule-fix/`
+- ❌ `../{project_name}-worktrees/`、`../worktrees/`（项目外兄弟目录，清理易误伤）
+- ❌ `.claude/worktrees/`（Claude 内置 `EnterWorktree` 工具默认路径，绑死单一 agent，见下方警告）
+- ❌ `/tmp/...`（临时目录，易丢失）
 
-**前置（创建前必做）**：确保 `.worktrees/` 在 `.gitignore`：
+**为什么是 `.worktrees/`（两条理由，缺一不可）**：
+
+1. **工具/agent 无关性（archetype 核心约束）**：本仓库同时维护双栈 agent 技能体系（Claude Code 栈与 Codex 栈）。worktree 路径必须对任何 agent 中立 —— 落在任一 agent 专属目录下会让另一 agent 无路径可用，路径随 agent 分裂。`.worktrees/` 是唯一中立约定。
+2. **可发现 + 清理不误伤**：留在项目根内 → 可发现；兄弟目录易被当无关文件夹整体删除，且破坏以项目根为基准的容器卷/bind mount（实测 netbox-lab 容器卷被兄弟目录 worktree 清理误伤，容器直接 exited）。
+
+**前置（创建前必做，两条）**：
+
+1. **回到主仓库目录**再执行创建命令（**禁止在 worktree 内执行 `git worktree add`**——`git rev-parse --show-toplevel` 在 worktree 内返回 worktree 自身顶层，会造成嵌套 `.worktrees/.../.worktrees/`）：
+```bash
+cd $(dirname $(cd $(git rev-parse --git-common-dir) && pwd))   # 锚定主仓库根
+```
+2. 确保 `.worktrees/` 在 `.gitignore`：
 ```bash
 grep -qxF '.worktrees/' .gitignore 2>/dev/null || echo '.worktrees/' >> .gitignore
 ```
+
+**⚠️ 禁用 Claude 内置 `EnterWorktree` 工具的默认模式**
+
+Claude Code 的 `EnterWorktree` 工具默认把 worktree 创建到 `.claude/worktrees/`（harness 硬编码），**会绕过本铁律**。创建 worktree 必须用下文标准流程里的 `git worktree add .worktrees/{目录名}`，**不要**图省事调用 `EnterWorktree` 的 `name` 模式。若已误建于 `.claude/worktrees/`，用 `git worktree move` 迁回 `.worktrees/` 或删除重建。
+
+**subagent 临时隔离豁免（语义分界）**
+
+worktree 分两类，铁律只管第一类：
+
+| 通道 | 用途 | 位置要求 |
+|------|------|---------|
+| **开发 worktree** | 人/主会话长周期使用（开发→MR→合并） | **必须 `.worktrees/{目录名}/`**（本铁律） |
+| **harness 临时隔离** | Agent tool 的 `isolation: "worktree"` 参数：subagent 用完即弃，harness 自动创建/回收 | 不受本铁律管辖，位置由 harness 管理，无需迁移 |
+
+判断标准：创建后是否需要"人再进去开发/长期存在"——是则走 `.worktrees/`，否则用 harness 隔离通道即可。
+
+**`WORKTREE_ROOT_OVERRIDE` 定性**：该环境变量仅限本地实验调试（如多位置测试），**不改变铁律默认约定**；协作/生产场景禁止使用，避免 worktree 位置随环境变量漂移。
 
 ### 分支命名规范
 
@@ -358,12 +383,12 @@ grep -qxF '.worktrees/' .gitignore 2>/dev/null || echo '.worktrees/' >> .gitigno
 ### 标准流程
 
 ```bash
-# 1. 创建 worktree（项目根下的 .worktrees/ 内，已在前置步骤加入 .gitignore）
+# 1. 创建 worktree（先回主仓库根！目录名 = 分支名斜杠→连字符，如 feat/story-x → .worktrees/feat-story-x）
 cd {project_root}
-git worktree add .worktrees/{branch_name} -b {branch_name}
+git worktree add .worktrees/{目录名} -b {branch_name}
 
 # 2. 在 worktree 中开发
-cd .worktrees/{branch_name}
+cd .worktrees/{目录名}
 # ... 开发代码 ...
 git add .
 git commit -m "<type>(<scope>): <subject>"
@@ -375,12 +400,13 @@ git push origin {branch_name}
 
 # 5. MR/PR 合并后，清理 worktree
 cd {project_root}
-git worktree remove .worktrees/{branch_name}
+git worktree remove .worktrees/{目录名}
 git branch -d {branch_name}
 ```
 
 **说明**:
-- `{project_root}`: 项目根目录
+- `{project_root}`: 项目根目录（**主仓库根**，非某个 worktree 的顶层；从 worktree 内锚定用 `git rev-parse --git-common-dir` 的父目录）
+- `{目录名}`: 分支名中的 `/` 替换为 `-`（见「Worktree 位置」铁律的目录名映射）
 - worktree 固定存放在 **`{project_root}/.worktrees/`**，不要使用项目外的兄弟目录（见上文「Worktree 位置」铁律）
 
 ### Worktree 管理
@@ -564,7 +590,7 @@ gh pr create --title "<type>(<scope>): <subject>" \
 
 ## 占位符推断规则（精简版）
 
-Codex 执行时按优先级推断占位符：
+Claude 执行时按优先级推断占位符：
 
 1. **检查项目配置**（Makefile, package.json, go.mod, pom.xml, Cargo.toml）
 2. **查看目录结构**（docs/, tests/, scripts/）
@@ -580,12 +606,16 @@ Codex 执行时按优先级推断占位符：
 
 ---
 
-**版本**: v5.2
+**版本**: v5.5
 **创建日期**: 2026-04-28
 **作者**: Development Team
 **状态**: 正式发布
 
 **更新日志**:
+- v5.5 (2026-11-21): 「Git 推送规则」章节新增「⚠️ 暂存禁用 -f」禁止项(`git add -f` 绕过 `.gitignore` 约束,详见 commit skill v2.3.0 铁律;worktree 本地提交高频入口前置拦截)(MR !21);「代码提交规范」节摘要最小化——type 枚举等易变内容移除,深链 commit skill 单一权威源 commit-conventions.md(ISSUE-20261120-001 规范统一)
+- v5.4 (2026-08-21): worktree 规则专项澄清(STORY-5-01)——新增 subagent 临时隔离豁免(区分开发 worktree 与 harness `isolation: "worktree"` 通道);目录名映射唯一化「分支名斜杠→连字符」;项目根操作化(先回主仓库 + 禁 worktree 内 add,防嵌套 `.worktrees/`);`WORKTREE_ROOT_OVERRIDE` 定性(仅限本地实验)
+- v5.3.1 (2026-08-15): 🐛 `git-workflow.skill.sh` 引用 `skills/developer/` 目录笔误修正为 `skills/dev/`(×4 处)
+- v5.3 (2026-08-02): Worktree 铁律增强 —— 反例补充 `.claude/worktrees/`（EnterWorktree 默认路径）、新增"工具/agent 无关性"深层理由、"禁用 EnterWorktree 默认模式"独立警告段
 - v5.2 (2026-07-17): Worktree 默认位置改为项目根 `.worktrees/`（铁律）+ 前置 .gitignore 检查，废弃兄弟目录默认值与 `{worktree_dir}` 占位符
 - v5.1 (2026-04-29): 整合 naming-conventions 到代码风格章节
 - v5.0 (2026-04-28): 重构为符合官方最佳实践

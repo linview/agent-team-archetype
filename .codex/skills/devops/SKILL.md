@@ -1,9 +1,7 @@
 ---
 name: "devops"
 description: "DevOps 工作技能 - CI/CD 流程、容器化构建、Kubernetes 部署、基础设施即代码、监控告警。当用户提到部署、容器化、K8s、Helm、ArgoCD、CI/CD、监控、日志、或需要执行部署、排查线上问题时，必须使用此技能。"
-metadata:
-  original-skill: "devops"
-  version: "2.0"
+version: "2.0"
 ---
 
 # DevOps 工作技能

@@ -103,7 +103,10 @@ def run_checks(project_dir: str, story_id: str, mode: str, scope: str, enable_dy
             'failed': 0,
             'p0_issues': 0,
             'p1_issues': 0,
-            'p2_issues': 0
+            'p2_issues': 0,
+            # v4.2.1 降级语义统计（ISSUE-20261124-003）: SKIP=检查未覆盖，WARN=通过但降级
+            'skipped': 0,
+            'warned': 0
         },
         'strategy': None  # 将在后面填充
     }
@@ -252,7 +255,17 @@ def run_checks(project_dir: str, story_id: str, mode: str, scope: str, enable_dy
                 continue
 
         results['summary']['total_checks'] += 1
-        if check['passed']:
+        # v4.2.1 降级语义分流（ISSUE-20261124-003）:
+        # SKIP = 检查未覆盖（提取失败）——不计入 passed/failed/P* issues，exit code 不受影响，
+        #        单独 skipped 计数供报告展示覆盖率说明；避免「未覆盖」伪装成机械全绿或假红
+        # WARN = 通过但降级（部分校验未执行）——计入 passed，单独 warned 计数供报告提示
+        check_status = check.get('status')
+        if check_status == 'SKIP':
+            results['summary']['skipped'] += 1
+        elif check_status == 'WARN' and check['passed']:
+            results['summary']['passed'] += 1
+            results['summary']['warned'] += 1
+        elif check['passed']:
             results['summary']['passed'] += 1
         else:
             results['summary']['failed'] += 1

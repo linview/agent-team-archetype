@@ -1,7 +1,7 @@
 #!/bin/bash
 # Git Workflow Skill for Developer
-# File: .claude/skills/developer/git-workflow.skill.sh
-# Version: v1.1
+# File: .claude/skills/dev/git-workflow.skill.sh
+# Version: v1.2
 # Last Updated: 2026-02-02
 #
 # Description:
@@ -24,7 +24,7 @@
 #
 # Installation:
 #   Add to ~/.bashrc or ~/.zshrc:
-#     source /path/to/your/project/.claude/skills/developer/git-workflow.skill.sh
+#     source /path/to/your/project/.claude/skills/dev/git-workflow.skill.sh
 #
 # Environment Variables:
 #   WORKTREE_ROOT_OVERRIDE   覆盖 worktree 根目录路径
@@ -36,8 +36,20 @@ set -e
 # Configuration
 # ============================================
 
-# 自动检测 Git 仓库根目录
-PROJ_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
+# 自动检测 Git 仓库根目录(主仓库根,非 worktree 顶层)
+# git-common-dir 指向主仓库的 .git 共享目录,其父目录即主仓库根——
+# 在 worktree 内 source 本脚本也能锚定正确(--show-toplevel 在 worktree 内
+# 会返回 worktree 自身顶层,导致嵌套 .worktrees/.../.worktrees/)
+COMMON_DIR=$(git rev-parse --git-common-dir 2>/dev/null)
+if [ -n "$COMMON_DIR" ] && [ -d "$COMMON_DIR" ]; then
+  PROJ_ROOT=$(cd "$COMMON_DIR/.." && pwd)
+else
+  PROJ_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
+  # 兜底警告:--show-toplevel 可能锚定到 worktree 自身
+  if [ -n "$PROJ_ROOT" ] && [ "$PROJ_ROOT" != "$(cd "$COMMON_DIR/.." 2>/dev/null && pwd)" ]; then
+    echo "⚠️  git-common-dir 不可用,已退回 --show-toplevel;若当前在 worktree 内,请先回主仓库"
+  fi
+fi
 
 if [ -z "$PROJ_ROOT" ]; then
   echo "❌ 错误：当前不在 Git 仓库中"
@@ -117,7 +129,7 @@ git-workflow.feature.start() {
     echo "示例:"
     echo "  git-workflow.feature.start story-06-01 \"pod handler\""
     echo "  → 创建分支: feat/story-06-01-pod-handler"
-    echo "  → 创建 worktree: .worktrees/story-06-01-pod-handler/"
+    echo "  → 创建 worktree: .worktrees/feat-story-06-01-pod-handler/"
     exit 1
   fi
 
@@ -125,8 +137,9 @@ git-workflow.feature.start() {
   SUMMARY="$2"
 
   # 构建分支名和 worktree 目录名
+  # 目录名映射铁律(SKILL.md v5.4):目录名 = 分支名中的 / 替换为 -(保留 feat/ 前缀)
   BRANCH_NAME="feat/$STORY_ID-$SUMMARY"
-  WORKTREE_NAME="$STORY_ID-$SUMMARY"
+  WORKTREE_NAME=$(echo "$BRANCH_NAME" | tr '/' '-')
   WORKTREE_PATH="$WORKTREE_ROOT/$WORKTREE_NAME"
 
   # 检查 worktree 是否已存在
@@ -267,7 +280,7 @@ git-workflow.feature.finish() {
 
   # 获取当前分支名
   CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-  WORKTREE_NAME=$(echo "$CURRENT_BRANCH" | sed "s/feat\///")
+  WORKTREE_NAME=$(echo "$CURRENT_BRANCH" | tr '/' '-')
 
   # 从分支名提取 worktree 路径
   WORKTREE_PATH="$WORKTREE_ROOT/$WORKTREE_NAME"
@@ -370,7 +383,7 @@ Worktree 管理:
   git-workflow.feature.start story-06-01 "pod handler"
 
   # 在 worktree 中开发
-  cd .worktrees/story-06-01-pod-handler
+  cd .worktrees/feat-story-06-01-pod-handler
   # ... 开发代码 ...
   git add .
   git commit -m "feat: implement pod handler"
@@ -392,7 +405,7 @@ Worktree 管理:
   ✅ 彩色输出（info/success/warning/error）
 
 文档:
-  Developer SKILL: .claude/skills/developer/SKILL.md
+  Developer SKILL: .claude/skills/dev/SKILL.md
   项目工作流指南: docs/guides/git-workflow.md
 EOF
 }

@@ -1,7 +1,7 @@
 ---
 name: spec-xchecker
 description: "四路交叉验证工具 - 检查 Design Spec ↔ Scrum ↔ Code ↔ Tests 对齐一致性。当用户需要验证代码实现是否符合设计文档、Story AC 是否完整、测试覆盖率是否达标、Story 开发完成检查、MR 前验证、代码审查一致性验证时，必须使用此技能。适用于开发阶段的质量保证，防止设计文档与实现不一致的事故。⚠️ 实验性质技能，建议结合人工审查使用。"
-version: "3.0"
+version: "4.2.1"
 status: "experimental"
 ---
 
@@ -54,16 +54,17 @@ Spec-XChecker 是一个自动化审查工具，用于检查项目文档与代码
 
 ## 检查清单
 
-**📌 完整的 21 项检查清单**：参见 [references/checklist.md](references/checklist.md)
+**📌 完整的 22 项检查清单**：参见 [references/checklist.md](references/checklist.md)
 
 **检查顺序铁律**：DS → SC → CT → ST（不可改变）
 
-### DS 层：Design Spec ↔ Scrum（4 项）
+### DS 层：Design Spec ↔ Scrum（5 项）
 
 - **DS-01**: Story 是否引用 Design Spec（P1）
 - **DS-02**: AC 是否与 Design Spec 一致（P0）
 - **DS-03**: Design Spec 引用是否正确（P2）
 - **DS-04**: Epic 规划是否与 Design Spec 一致（P2）
+- **DS-05**: 设计文档成稿严谨性——语义 review 五问（P1，AI/人工判定，不进脚本自动检查）
 
 ### SC 层：Scrum ↔ Code（6 项）
 
@@ -232,9 +233,10 @@ Spec-XChecker 与其他角色密切协作：
 │       └── strategy_generator.py# 智能策略引擎
 ├── references/                  # 参考文档（官方标准，按需加载）
 │   ├── usage_guide.md           # 详细使用指南
-│   ├── checklist.md             # 完整的 21 项检查清单
+│   ├── checklist.md             # 完整的 22 项检查清单
 │   ├── strategy_engine.md       # 智能策略引擎详细说明
 │   └── troubleshooting.md       # 故障排查指南
+├── tests/                       # 回归测试装置（仅 .claude 栈；DS 层反例 + 双栈镜像守护，v4.1.3）
 └── assets/                     # 静态资源（官方标准）
     └── config/
         └── config.yaml          # 配置文件
@@ -264,8 +266,16 @@ Spec-XChecker 与其他角色密切协作：
 - 确认 Story ID 格式正确（例如：15-23）
 
 **Q: 没有 Design Spec？**
-- 在 Story 文档中添加 `Design Spec: ../design/xxx.md`
+- 在 Story 文档中添加 `Design Spec: ../design/xxx.md`，或 frontmatter 列表形式 `design_docs:`/`design_refs:`（v4.1.3 起双字段兼容）
 - 创建对应的 Design Spec 文档
+
+**Q: Story 用 design_refs 字段（frontmatter）引用设计文档，为什么以前报"未引用 Design Spec"？**
+- v4.1.3 起格式 1 双字段兼容（`design_docs`/`design_refs`），旧版本请升级
+- 值支持 `path.md`、`path.md#锚点`、`path.md（章节注释）` 三种形态，路径后缀注释自动剥离
+
+**Q: COMPLETED 终态 Story 引用已归档的旧版 Design Spec，DS-01 报 FAIL？**
+- 属预期形态（终态历史快照语义）：终态 Story 按项目裁定保留历史版本引用，design 文档语义化版本演进归档后引用悬空
+- 不建议刷新终态引用，工具也不做自动 fallback 到 `archive/`（会掩盖真实引用漂移）
 
 **Q: 遇到其他问题？**
 - 参见 [references/troubleshooting.md](references/troubleshooting.md) 获取详细故障排查指南
@@ -277,15 +287,32 @@ Spec-XChecker 与其他角色密切协作：
 以下参考文档会在需要时按需加载：
 
 - **[详细使用指南](references/usage_guide.md)** - 命令行参数、Hook 配置、报告位置
-- **[完整检查清单](references/checklist.md)** - 21 项检查的详细说明
+- **[完整检查清单](references/checklist.md)** - 22 项检查的详细说明
 - **[智能策略引擎](references/strategy_engine.md)** - AC 类型映射、负向规则、置信度计算
 - **[故障排查指南](references/troubleshooting.md)** - 常见问题和解决方案
 
 ---
 
-**版本**: v4.1 | **最后更新**: 2026-07-03 | **维护者**: maintainer@example.com
+**版本**: v4.2.1 | **最后更新**: 2026-11-24 | **维护者**: maintainer@example.com
 
 **更新日志**:
+- v4.2.1 (2026-11-24): 🐛 **DS 层 fail-open 盲区修复——降级语义分离（SKIP/WARN）**
+  - `checkers/checker_design.py` 三处「未命中即 PASS」降级路径修复（ISSUE-20261124-003）：DS-02 需求章节提取失败不再 `passed=True` 假绿，改返回 `passed=False + status='SKIP'`（未覆盖≠通过，不计入失败统计）；DS-03 版本正则扩展（原只认中文键「版本：vX.Y」→ 中文/英文键 + v 前缀可选 + YAML 引号形态），仍未识别时 WARN 显性化「版本校验未覆盖」；DS-04 无 Epic 引用/无法对账时 WARN 显性化「DS-04 未覆盖」（passed 保留 True，非 Epic 拆分属合法场景）
+  - `CheckResult` 新增 `status` 字段（None/'SKIP'/'WARN'）；主流程 summary 新增 skipped/warned 统计，SKIP 不计入 failed/P0 issues（exit code 语义不变）；`report_generator.py` 报告新增「⏭️ 未覆盖项」「⚠️ 降级提示项」独立段落——覆盖率说明而非绿勾/红叉
+  - 测试新增 `tests/test_ds_fail_open.py`（14 用例 × 双栈：正反例 + 降级改造不吞真实失败守护）；evals 激活 e11 反事实用例（`grade_programmatic.py --e11`，ds05_fixture 真实素材直调，抓到带引号 frontmatter 第四形态盲点）
+- v4.2 (2026-11-24): 🎯 **DS 层新增 DS-05 设计文档成稿严谨性——语义 review 五问**
+  - DS 层 4 项 → 5 项，清单总数 21 → 22：DS-05「版本记录单一权威 / 编号一号一义 / 名实三面对账 / 引用现行 / 勘误无歧义」，P1
+  - **AI/人工判定项，不进脚本自动检查**：需要结合语义/上下文/因果理解（语义 review 不作为强制格式标准）；结构机械项（frontmatter 必填字段/TOC/编号纪律/链接存在性/test_reports 引用）不在 DS 层判定范围——DS-05 只负责语义层判定，机械格式项由设计文档产出侧的成稿纪律把关
+  - 定位：设计文档在源头含糊，偏差沿 Story→Code→Tests 逐级放大；DS 层是四路验证第一道闸，把严谨性审查前移到设计文档本身
+  - `checklist.md` DS 段补 DS-05 判定要点；`checkers/checker_design.py` 不变（DS-05 非机械项）
+- v4.1.3 (2026-11-02): 🐛 **DS 层双修复**
+  - `story_resolver.py` 格式 1：字段名兼容 `design_refs`（部分项目 Story 模板使用该字段，旧代码只认 `design_docs`，DS-01/02/03 对此类 Story 整类误报"未引用"）；值尾兼容 `path.md（全角括号章节注释）`——统一截取首个 `.md` 前纯路径，`#锚点` 与 `（注释）` 两种尾部均剥离
+  - `checker_design.py` DS-04：新增最强证据快速通道——Design Spec 显式指派本 Story（正文含 `STORY-x-xx` 反向追踪字样）时直接通过；一份 guide 跨 Epic 承载多个 Story 时 Epic 编号无交集属常态，不再误报"Epic 引用不一致"
+  - 顺手修复：.codex 栈 `trigger_check.sh`/`notify_pending_reports.sh` `PROJECT_DIR` 值尾多余 `}` 笔误（memory 目录计算走偏）
+  - 新增 `tests/` 回归装置（DS 层反例清单 + 双栈镜像一致性守护，仅 .claude 栈）
+  - 已知边界（预期形态，非缺陷不修）：终态（COMPLETED）Story 按项目裁定保留历史版本引用，design 文档语义化版本演进归档后引用悬空，DS-01 对此类 Story 报 FAIL 属终态历史快照语义
+- v4.1.2 (2026-09-04): 🐛 `story_resolver.py` B5 修复——`design_docs` 值形如 `path.md#锚点` 时锚点段夹在 `.md` 与右引号之间，旧正则要求引号紧跟 `.md` 导致整类失配（DS-01/02/03 全误报）。版本序列补录条目（v4.1.3 已包含并扩展其语义）
+- v4.1.1 (2026-08-15): 🐛 hook 脚本 `source utils/` 悬空路径修复为 `scripts/lib/`;.codex 栈 hook 恢复 Codex 自指环境变量(单层回退,清除栈绑定污染残留)
 - v4.1 (2026-07-03): 🐛 **B2/B3/B4 工具缺陷修复**（patch，对比验证驱动）
   - **B2** `strategy_generator.py`：`go_code` 模式收紧（移除裸"实现"/"新增函数"/"创建 API"，改用 `.go`/`internal/pkg`/`go build`），Python 项目不再误判 go_code
   - **B3** `spec-xchecker.py`：`mode` 层裁剪（quick=DS / medium=DS+SC / deep=全集）+ UNKNOWN fallback 到全集 + 汇总统计改用裁剪后 `strategy_checks`（修 mode 不裁剪 + UNKNOWN 时 total=0）

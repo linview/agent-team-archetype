@@ -7,12 +7,24 @@ DS 层检查器：Design Spec ↔ Scrum 文档一致性检查
 - DS-02: AC 是否与 Design Spec 一致（P0）
 - DS-03: Design Spec 引用是否正确（P2）
 - DS-04: Epic 规划是否与 Design Spec 一致（P2）
+
+降级语义（v4.2.1，ISSUE-20261124-003 fail-open 盲区修复）:
+机械启发式的强项是「有明确命中模式的检查」——提取失败/模式未命中不代表通过。
+CheckResult.status 区分三种结论，避免「未命中即 PASS」把未覆盖伪装成机械全绿:
+- None（默认）: 按 passed 推导（True→真实通过 / False→真实失败）
+- 'SKIP': 检查未覆盖（提取失败/章节未识别），不计入失败统计，报告展示覆盖率说明
+- 'WARN': 通过项附带降级提示（部分校验未执行/无法完整对账）
 """
 
 import re
 from pathlib import Path
 from typing import Optional
 from dataclasses import dataclass
+
+# Design Spec 版本号识别（v4.2.1 扩展: 原只认中文键「版本：vX.Y」→ 中文/英文键 + v 前缀可选
+# + YAML 引号形态可选，覆盖 frontmatter `version: v2.1` / `version: "v2.1"` / `version: 2.1` /
+# `Version: v2.1` 等形态；ds05_fixture 带引号 frontmatter 即真实素材中抓到的第四形态）
+VERSION_PATTERN = re.compile(r'(?:版本|Version)\s*[:：]?\s*["\']?v?(\d+\.\d+)["\']?', re.IGNORECASE)
 
 
 @dataclass
@@ -24,6 +36,7 @@ class CheckResult:
     severity: str  # P0, P1, P2
     message: str
     details: Optional[str] = None
+    status: Optional[str] = None  # None / 'SKIP' / 'WARN'（降级语义，见模块 docstring）
 
 
 class DesignChecker:
@@ -47,8 +60,8 @@ class DesignChecker:
         Returns:
             CheckResult
         """
-        # 最强证据：Design Spec 已成功加载（load_design_spec 支持 frontmatter design_docs + 正文两种格式，v2.7 修复）
-        # 避免误报 frontmatter design_docs 引用（DS-01 原只认正文 "Design Spec:" 行）
+        # 最强证据：Design Spec 已成功加载（load_design_spec 支持 frontmatter design_docs/design_refs + 正文两种格式，v2.7 修复，v4.1.3 扩展）
+        # 避免误报 frontmatter design_docs/design_refs 引用（DS-01 原只认正文 "Design Spec:" 行）
         if self.design_spec_content:
             return CheckResult(
                 check_id='DS-01',
@@ -56,7 +69,7 @@ class DesignChecker:
                 passed=True,
                 severity='P1',
                 message='Story 引用了 Design Spec（已成功加载内容）',
-                details='引用来源: frontmatter design_docs 或正文 Design Spec 行（由 load_design_spec 解析）'
+                details='引用来源: frontmatter design_docs/design_refs 或正文 Design Spec 行（由 load_design_spec 解析）'
             )
 
         # 检查 Story 文档中是否有 Design Spec 引用
@@ -141,14 +154,17 @@ class DesignChecker:
                 break
 
         if not spec_requirements:
-            # Design Spec 中没有明确的需求章节
+            # fail-open 盲区修复（ISSUE-20261124-003）：提取失败 ≠ 真实通过。
+            # 需求章节未识别时 DS-02 未覆盖——返回 SKIP 而非 passed=True 假绿，
+            # 无需求章节（如表格型设计文档）不应获得与合规文档一致的机械全绿
             return CheckResult(
                 check_id='DS-02',
                 description='AC 是否与 Design Spec 一致',
-                passed=True,
+                passed=False,
                 severity='P0',
-                message='Design Spec 中没有明确的需求章节，无法验证 AC 一致性',
-                details=f'找到 {len(ac_list)} 个 AC'
+                message='DS-02 未覆盖：Design Spec 未识别出需求章节（SKIP，不计入失败）',
+                details=f'找到 {len(ac_list)} 个 AC；建议: Design Spec 补充「需求/Requirements」章节（列表项）以启用 AC 一致性校验',
+                status='SKIP'
             )
 
         # 验证 AC 是否覆盖了 Design Spec 的关键需求
@@ -205,7 +221,7 @@ class DesignChecker:
         # 最强证据：Design Spec 已成功加载即证明引用路径有效（v2.7 修复：支持 frontmatter design_docs）
         # 避免误报 frontmatter design_docs 引用（DS-03 原只认正文 "Design Spec:" 行）
         if self.design_spec_content:
-            version_match = re.search(r'版本\s*[:：]?\s*v(\d+\.\d+)', self.design_spec_content)
+            version_match = VERSION_PATTERN.search(self.design_spec_content)
             if version_match:
                 version = version_match.group(1)
                 return CheckResult(
@@ -216,13 +232,17 @@ class DesignChecker:
                     message=f'Design Spec 引用正确（版本 v{version}）',
                     details='引用路径已验证（load_design_spec 成功加载）'
                 )
+            # fail-open 盲区修复（ISSUE-20261124-003）：引用有效性已真实通过（加载成功），
+            # 但版本号未识别 = 版本校验未执行——WARN 显性化，不再静默跳过
             return CheckResult(
                 check_id='DS-03',
                 description='Design Spec 引用是否正确',
                 passed=True,
                 severity='P2',
-                message='Design Spec 引用正确（已成功加载）',
-                details='引用路径已验证（load_design_spec 成功加载）'
+                message='Design Spec 引用正确（已成功加载）——版本号未识别，版本校验未覆盖（WARN）',
+                details='引用路径已验证（load_design_spec 成功加载）；版本校验未执行: 未匹配到「版本/Version」键'
+                        '（支持中文键「版本：vX.Y」与英文键「version: vX.Y / X.Y」及 frontmatter 形态）',
+                status='WARN'
             )
 
         # 提取 Design Spec 引用路径
@@ -265,9 +285,8 @@ class DesignChecker:
 
         # 检查版本号格式（如果有的话）
         if self.design_spec_content:
-            # 匹配版本号: v1.0, v2.1, etc.
-            version_pattern = r'版本\s*[:：]?\s*v(\d+\.\d+)'
-            version_match = re.search(version_pattern, self.design_spec_content)
+            # 匹配版本号: v1.0, v2.1, version: v2.1, 版本: 2.1, etc.（v4.2.1 同步 VERSION_PATTERN）
+            version_match = VERSION_PATTERN.search(self.design_spec_content)
 
             if version_match:
                 version = version_match.group(1)
@@ -305,14 +324,36 @@ class DesignChecker:
         story_epics = re.findall(epic_pattern, self.story_content, re.IGNORECASE)
 
         if not story_epics:
+            # fail-open 盲区修复（ISSUE-20261124-003）：无 Epic 引用 = DS-04 未覆盖。
+            # passed 保留 True（非 Epic 拆分属合法场景，不判失败），但 WARN 显性化——
+            # 不再以「Epic 引用检查通过」的形态静默放行
             return CheckResult(
                 check_id='DS-04',
                 description='Epic 规划是否与 Design Spec 一致',
                 passed=True,
                 severity='P2',
-                message='Story 文档中未找到 Epic 引用',
-                details='建议: 如果属于某个 Epic，在 Story 中明确说明'
+                message='Story 文档中未找到 Epic 引用，DS-04 未覆盖（无法执行 Epic 对账）',
+                details='建议: 如果属于某个 Epic，在 Story 中明确说明',
+                status='WARN'
             )
+
+        # 最强证据（v4.1.3）：Design Spec 显式指派本 Story（「实装归 STORY-x-xx」类反向追踪）——
+        # 一份 guide 跨 Epic 承载多个 Story（不同章节归不同 Epic）时 Epic 编号无交集
+        # 属常态而非不一致；Story 级指派优先于 Epic 编号交集判定
+        if self.design_spec_content:
+            id_match = re.search(r'^id:\s*"?STORY-([\d-]+)"?', self.story_content, re.MULTILINE)
+            if id_match:
+                sid = id_match.group(1)
+                if f'STORY-{sid}' in self.design_spec_content or f'story-{sid}' in self.design_spec_content:
+                    return CheckResult(
+                        check_id='DS-04',
+                        description='Epic 规划是否与 Design Spec 一致',
+                        passed=True,
+                        severity='P2',
+                        message=f'Design Spec 显式指派本 Story（STORY-{sid}），双向追踪成立',
+                        details='Story 级指派（实装归 STORY-x-xx）优先于 Epic 编号交集：'
+                                '跨 Epic 服务型 guide 中 Epic 编号无交集属常态'
+                    )
 
         # 如果有 Design Spec，检查是否提到了相同的 Epic
         if self.design_spec_content:
@@ -346,13 +387,21 @@ class DesignChecker:
                         details='建议: 确保 Story 和 Design Spec 中的 Epic 引用一致'
                     )
 
+        # 兜底（v4.2.1 未覆盖显性化）：快速通道与交集判定均未命中——Design Spec 未加载
+        # 或 Spec 中无 Epic 规划引用，对账无法完成。passed 保留 True（不吞既有语义），
+        # WARN 显性化未覆盖，不再伪装成「检查通过」（ISSUE-20261124-003）
+        if not self.design_spec_content:
+            reason = 'Design Spec 未加载，Epic 对账无法执行'
+        else:
+            reason = 'Design Spec 中未找到 Epic 规划引用，Epic 对账无法完成'
         return CheckResult(
             check_id='DS-04',
             description='Epic 规划是否与 Design Spec 一致',
             passed=True,
             severity='P2',
-            message='Epic 引用检查通过',
-            details=f'Story Epic: {story_epics}'
+            message=f'DS-04 未覆盖：{reason}（WARN）',
+            details=f'Story Epic: {story_epics}',
+            status='WARN'
         )
 
 
@@ -382,9 +431,14 @@ if __name__ == '__main__':
         results.append(checker.check_ds02_ac_matches_design_spec([]))
         results.append(checker.check_ds04_epic_matches_design_spec())
 
-    # 打印结果
+    # 打印结果（v4.2.1: 降级语义区分展示——SKIP 未覆盖 / WARN 降级提示）
     for result in results:
-        status = "✅" if result.passed else "❌"
+        if result.status == 'SKIP':
+            status = "⏭️ SKIP"
+        elif result.status == 'WARN':
+            status = "⚠️ WARN"
+        else:
+            status = "✅ PASS" if result.passed else "❌ FAIL"
         print(f"{status} [{result.check_id}] {result.description}")
         print(f"   优先级: {result.severity}")
         print(f"   消息: {result.message}")

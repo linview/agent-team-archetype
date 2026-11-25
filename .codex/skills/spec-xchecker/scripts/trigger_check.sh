@@ -12,7 +12,7 @@
 
 set -euo pipefail
 
-PROJECT_DIR="${CODEX_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-$(pwd)}}"
+PROJECT_DIR="${CODEX_PROJECT_DIR:-$(pwd)}"
 
 # 获取 memory 目录
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

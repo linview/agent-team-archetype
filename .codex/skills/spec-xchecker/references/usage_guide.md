@@ -45,7 +45,7 @@ python3 .codex/skills/spec-xchecker/spec-xchecker.py --story 15-23 --mode medium
 ## 通过 Skill 调用（推荐）
 
 ```bash
-# Codex 会自动调用 spec-xchecker.py
+# Claude Code 会自动调用 spec-xchecker.py
 /spec-xchecker --story 15-23 --mode medium
 ```
 
@@ -59,7 +59,7 @@ python3 .codex/skills/spec-xchecker/spec-xchecker.py --story 15-23 --mode medium
 
 ## Hook 自动触发
 
-### Stop Hook（关闭 Codex 时触发）
+### Stop Hook（关闭 Claude 时触发）
 
 **功能**：
 - 自动检测到新的 git commit
@@ -72,7 +72,7 @@ python3 .codex/skills/spec-xchecker/spec-xchecker.py --story 15-23 --mode medium
 # .codex/skills/spec-xchecker/trigger_check.sh
 ```
 
-### SessionStart Hook（打开 Codex 时通知）
+### SessionStart Hook（打开 Claude 时通知）
 
 **功能**：
 - 自动通知上次检查结果

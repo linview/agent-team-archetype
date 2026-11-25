@@ -8,11 +8,11 @@
 
 set -euo pipefail
 
-PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$(pwd)}"
+PROJECT_DIR="${CODEX_PROJECT_DIR:-$(pwd)}"
 
 # 获取 memory 目录
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${SCRIPT_DIR}/utils/get_memory_dir.sh"
+source "${SCRIPT_DIR}/lib/get_memory_dir.sh"
 MEMORY_DIR=$(get_memory_dir "${PROJECT_DIR}")
 INDEX_FILE="${MEMORY_DIR}/spec-xchecker/reports_index.json"
 
